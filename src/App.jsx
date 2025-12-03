@@ -56,7 +56,7 @@ const Sidebar = () => {
   return (
     <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 p-4">
       <div className="mb-8 px-2">
-        <h1 className="text-xl font-bold text-brand-600">Dashboard</h1>
+        <h1 className="text-xl font-bold text-brand-600">Plan & Plate</h1>
       </div>
       
       <div className="flex-1 space-y-1">

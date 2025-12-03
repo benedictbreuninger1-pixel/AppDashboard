@@ -26,7 +26,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-100 via-brand-50 to-pink-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-brand-100">
-        <h1 className="text-3xl font-bold text-brand-700 mb-8">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-brand-700 mb-8">Plan & Plate</h1>
         
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
