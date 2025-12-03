@@ -1,26 +1,34 @@
 import React, { useState } from 'react';
-import { useAuthStore } from '../lib/store';
+// WICHTIG: Wir importieren jetzt aus dem neuen Context, nicht mehr aus dem Store
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  // State für Username statt Email
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuthStore();
-  const navigate = useNavigate();
   const [error, setError] = useState('');
+  
+  // Login-Funktion aus dem neuen Context holen
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const res = await login(email, password);
+    setError(''); // Alten Fehler löschen
+    
+    // Wir übergeben jetzt username statt email
+    const res = await login(username, password);
+    
     if (res.success) {
       navigate('/');
     } else {
-      setError('Login fehlgeschlagen. Prüfe E-Mail und Passwort.');
+      // Fehlermeldung angepasst
+      setError('Login fehlgeschlagen. Benutzername oder Passwort falsch.');
     }
   };
 
   return (
-    // Hier ist dein "Gradient"-Design aus der Datei:
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">BeneDashboard</h1>
@@ -28,10 +36,15 @@ export default function LoginPage() {
         
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">E-Mail</label>
+            {/* Label geändert */}
+            <label className="block text-sm font-medium text-gray-700 mb-2">Benutzername</label>
             <input
-              type="email" placeholder="deine@email.de"
-              value={email} onChange={e => setEmail(e.target.value)}
+              type="text" 
+              placeholder="Dein Username"
+              value={username} 
+              onChange={e => setUsername(e.target.value)}
+              // Autocomplete für Username hilft Browsern beim Speichern
+              autoComplete="username"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
             />
           </div>
@@ -39,8 +52,11 @@ export default function LoginPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Passwort</label>
             <input
-              type="password" placeholder="••••••••"
-              value={password} onChange={e => setPassword(e.target.value)}
+              type="password" 
+              placeholder="••••••••"
+              value={password} 
+              onChange={e => setPassword(e.target.value)}
+              autoComplete="current-password"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
             />
           </div>
