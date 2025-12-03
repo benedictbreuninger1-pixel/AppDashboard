@@ -91,7 +91,7 @@ const Sidebar = () => {
             <span className="truncate">{user?.email}</span>
         </div>
         <button onClick={logout} className="flex items-center gap-2 text-slate-500 hover:text-red-600 px-2 text-sm w-full">
-            <LogOut size={16} /> Abmelden
+            <LogOut size={16} /> AbmeldenX3
         </button>
       </div>
     </aside>
