@@ -28,7 +28,7 @@ export default function ShoppingListPage() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-slate-800 mb-1">Einkaufsliste</h1>
-          <p className="text-slate-500 text-sm">Was fehlt — außer Motivation?</p>
+          <p className="text-slate-500 text-sm">Was brauchen wir?</p>
         </div>
 
         {/* Add Item Form */}
@@ -39,19 +39,19 @@ export default function ShoppingListPage() {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Was einkaufen?"
-              className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-200 focus:border-transparent outline-none"
+              className="flex-1 min-w-0 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-200 focus:border-transparent outline-none text-sm"
             />
             <input
               type="text"
               value={amount}
               onChange={e => setAmount(e.target.value)}
-              placeholder="Menge (z.B. 2kg, 500g)"
-              className="w-40 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-200 outline-none"
+              placeholder="Menge"
+              className="w-20 sm:w-32 px-2 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-200 outline-none"
             />
             <button
               type="submit"
               disabled={!name}
-              className="px-6 py-2 bg-brand-400 text-white rounded-lg hover:bg-brand-500 disabled:opacity-50 transition-colors flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 bg-brand-400 text-white rounded-lg hover:bg-brand-500 disabled:opacity-50 transition-colors flex items-center justify-center shrink-0"
             >
               <Plus size={20} />
             </button>

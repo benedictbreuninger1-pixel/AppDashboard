@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   font-family: Inter, system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
@@ -13,6 +17,7 @@ body {
 .safe-area-pb {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
 /* Fade-In Animation */
 @keyframes fadeIn {
   from {
@@ -25,4 +30,18 @@ body {
 
 .animate-fadeIn {
   animation: fadeIn 500ms ease-in-out;
+}
+
+/* Slide Up Animation (Mobile Menu) */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 300ms ease-out;
 }

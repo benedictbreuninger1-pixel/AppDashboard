@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, Outlet } fro
 import { Home, CheckSquare, BookOpen, LogOut, User, ShoppingCart } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FadeIn } from './components/PageTransition';
-import { pb } from './lib/pocketbase';
+import { pb, POCKETBASE_URL } from './lib/pocketbase';
 import LoginPage from './pages/Login';
 import TodosPage from './pages/Todos';
 import RecipesPage from './pages/Recipes';
@@ -36,21 +36,64 @@ const NavLinks = [
 
 const BottomNav = () => {
   const location = useLocation();
+  const { logout } = useAuth();
+  const [showLogoutMenu, setShowLogoutMenu] = React.useState(false);
+  
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 md:hidden z-50 safe-area-pb">
-      <div className="flex justify-around items-center h-16">
-        {NavLinks.map((link) => {
-          const isActive = location.pathname === link.to;
-          const IconComponent = link.icon;
-          return (
-            <Link key={link.to} to={link.to} className={`flex flex-col items-center p-2 transition-colors ${isActive ? 'text-brand-400' : 'text-slate-400'}`}>
-              <IconComponent size={24} />
-              <span className="text-[10px] mt-0.5 font-medium">{link.label}</span>
-            </Link>
-          )
-        })}
-      </div>
-    </nav>
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 md:hidden z-50 safe-area-pb">
+        <div className="flex justify-around items-center h-16">
+          {NavLinks.map((link) => {
+            const isActive = location.pathname === link.to;
+            const IconComponent = link.icon;
+            return (
+              <Link key={link.to} to={link.to} className={`flex flex-col items-center p-2 transition-colors ${isActive ? 'text-brand-400' : 'text-slate-400'}`}>
+                <IconComponent size={24} />
+                <span className="text-[10px] mt-0.5 font-medium">{link.label}</span>
+              </Link>
+            )
+          })}
+          <button 
+            onClick={() => setShowLogoutMenu(true)}
+            className="flex flex-col items-center p-2 text-slate-400"
+          >
+            <User size={24} />
+            <span className="text-[10px] mt-0.5 font-medium">Profil</span>
+          </button>
+        </div>
+      </nav>
+      
+      {/* Logout Menu (Mobile) */}
+      {showLogoutMenu && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-50 md:hidden flex items-end"
+          onClick={() => setShowLogoutMenu(false)}
+        >
+          <div 
+            className="bg-white w-full rounded-t-2xl p-6 space-y-4 animate-slideUp"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-slate-800">Account</h3>
+            <button
+              onClick={() => {
+                logout();
+                setShowLogoutMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <LogOut size={20} />
+              <span>Abmelden</span>
+            </button>
+            <button
+              onClick={() => setShowLogoutMenu(false)}
+              className="w-full px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
@@ -100,7 +143,7 @@ const Sidebar = () => {
 // --- DASHBOARD ---
 const Dashboard = () => {
     const { user } = useAuth();
-    const [stats, setStats] = React.useState({ todos: 0, todosOpen: 0, recipes: 0 });
+    const [stats, setStats] = React.useState({ todos: 0, todosOpen: 0, recipes: 0, shoppingItems: 0 });
     const [quickTodos, setQuickTodos] = React.useState([]);
     const [randomRecipe, setRandomRecipe] = React.useState(null);
     
@@ -114,10 +157,15 @@ const Dashboard = () => {
           // Fetch Recipes
           const recipesData = await pb.collection('recipes').getFullList({ sort: '-updated' });
           
+          // Fetch Shopping Items
+          const shoppingData = await pb.collection('shopping_items').getFullList();
+          const openShoppingItems = shoppingData.filter(s => s.status === 'open');
+          
           setStats({
             todos: todosData.length,
             todosOpen: openTodos.length,
             recipes: recipesData.length,
+            shoppingItems: openShoppingItems.length,
           });
           
           // Quick-Access: Nächste 3 offene Todos
@@ -142,7 +190,7 @@ const Dashboard = () => {
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">
-              Hey {user?.name || user?.username || 'Bene'} 
+              Hey {user?.name || user?.username || 'Bene'} 👋
             </h1>
             <p className="text-slate-500 text-sm">Deine Übersicht für heute</p>
           </div>
@@ -160,8 +208,8 @@ const Dashboard = () => {
             </div>
             
             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-              <div className="text-2xl font-bold text-brand-500">{stats.todos}</div>
-              <div className="text-xs text-slate-500 mt-1">Todos total</div>
+              <div className="text-2xl font-bold text-brand-500">{stats.shoppingItems}</div>
+              <div className="text-xs text-slate-500 mt-1">Einkaufen</div>
             </div>
           </div>
           
@@ -199,9 +247,19 @@ const Dashboard = () => {
                 className="block bg-gradient-to-br from-brand-50 to-pink-50 p-4 rounded-xl border border-brand-100 hover:shadow-md transition-all group"
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-2xl shadow-sm">
-                    🍽️
-                  </div>
+                  {randomRecipe.image ? (
+                    <div className="w-10 h-10 rounded-lg overflow-hidden shadow-sm shrink-0">
+                      <img 
+                        src={`${POCKETBASE_URL}/api/files/${randomRecipe.collectionId}/${randomRecipe.id}/${randomRecipe.image}`}
+                        alt={randomRecipe.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-2xl shadow-sm shrink-0">
+                      🍽️
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-slate-800 group-hover:text-brand-600 transition-colors">
                       {randomRecipe.title}
