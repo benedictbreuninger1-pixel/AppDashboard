@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRecipes } from '../hooks/useData';
 import { POCKETBASE_URL } from '../lib/pocketbase';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
@@ -12,7 +12,32 @@ export default function RecipesPage() {
   const [title, setTitle] = useState('');
   const [ingredients, setIngredients] = useState('');
   const [steps, setSteps] = useState('');
+  const [tags, setTags] = useState('');
   const [imageFile, setImageFile] = useState(null);
+  
+  // Search & Filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTag, setSelectedTag] = useState('');
+
+  // Alle verfügbaren Tags extrahieren
+  const allTags = useMemo(() => {
+    const tagSet = new Set();
+    recipes.forEach(r => {
+      if (r.tags) {
+        r.tags.split(',').forEach(tag => tagSet.add(tag.trim()));
+      }
+    });
+    return Array.from(tagSet).sort();
+  }, [recipes]);
+
+  // Gefilterte Rezepte
+  const filteredRecipes = useMemo(() => {
+    return recipes.filter(r => {
+      const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesTag = !selectedTag || (r.tags && r.tags.split(',').map(t => t.trim()).includes(selectedTag));
+      return matchesSearch && matchesTag;
+    });
+  }, [recipes, searchQuery, selectedTag]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,11 +45,13 @@ export default function RecipesPage() {
     formData.append('title', title);
     formData.append('ingredients', ingredients);
     formData.append('steps', steps);
+    formData.append('tags', tags);
     if (imageFile) formData.append('image', imageFile);
     await createRecipe(formData);
     setTitle(''); 
     setIngredients(''); 
-    setSteps(''); 
+    setSteps('');
+    setTags('');
     setImageFile(null); 
     setShowForm(false);
   };
@@ -53,6 +80,12 @@ export default function RecipesPage() {
               value={title} 
               onChange={e => setTitle(e.target.value)} 
               required 
+            />
+            <input 
+              className="w-full text-sm border-none focus:outline-none p-0 text-slate-600" 
+              placeholder="Tags (z.B. Vegan, Schnell, Dessert)" 
+              value={tags} 
+              onChange={e => setTags(e.target.value)} 
             />
             <textarea 
               className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[80px] focus:ring-2 focus:ring-brand-200 outline-none" 
@@ -86,21 +119,66 @@ export default function RecipesPage() {
           </form>
         )}
 
+        {/* Search & Filter */}
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Rezept suchen..."
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-200 outline-none"
+            />
+          </div>
+          
+          {allTags.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setSelectedTag('')}
+                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${!selectedTag ? 'bg-brand-400 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                Alle
+              </button>
+              {allTags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setSelectedTag(tag)}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${selectedTag === tag ? 'bg-brand-400 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {loading ? (
           <SkeletonLoader type="recipe" count={4} />
-        ) : recipes.length === 0 ? (
-          <p className="text-center text-slate-400 py-8 text-sm">Noch keine Rezepte</p>
+        ) : filteredRecipes.length === 0 ? (
+          <p className="text-center text-slate-400 py-8 text-sm">
+            {searchQuery || selectedTag ? 'Keine Rezepte gefunden' : 'Noch keine Rezepte'}
+          </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {recipes.map(r => (
+            {filteredRecipes.map(r => (
               <Link 
                 key={r.id} 
                 to={`/recipes/${r.id}`}
                 className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow block"
               >
                 {r.image && <img src={`${POCKETBASE_URL}/api/files/${r.collectionId}/${r.id}/${r.image}`} alt={r.title} className="w-full h-32 object-cover" />}
-                <div className="p-4 relative">
+                <div className="p-4">
                     <h3 className="font-bold text-slate-800 mb-2">{r.title}</h3>
+                    {r.tags && (
+                      <div className="flex gap-1 flex-wrap mb-2">
+                        {r.tags.split(',').map((tag, i) => (
+                          <span key={i} className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">
+                            {tag.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <p className="text-xs text-slate-500 line-clamp-3">{r.ingredients}</p>
                 </div>
               </Link>

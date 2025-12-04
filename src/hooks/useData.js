@@ -73,13 +73,13 @@ export function useRecipes() {
     if (user) fetchRecipes();
   }, [user]);
 
+
   const createRecipe = async (formData) => {
     if (!formData.has('owner')) formData.append('owner', user.id);
     const record = await pb.collection('recipes').create(formData);
     setRecipes([record, ...recipes]);
   };
 
-  // ✨ NEU: Update-Funktion
   const updateRecipe = async (id, formData) => {
     const record = await pb.collection('recipes').update(id, formData);
     setRecipes(prev => prev.map(r => r.id === id ? record : r));
@@ -91,7 +91,5 @@ export function useRecipes() {
     await pb.collection('recipes').delete(id);
   };
 
-  return { recipes, loading, createRecipe, updateRecipe, deleteRecipe };
-  //                                        ^^^^^^^^^^^^
-  //                                        NEU!
+  return { recipes, loading, createRecipe, updateRecipe, deleteRecipe };                                     
 }

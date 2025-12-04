@@ -25,15 +25,16 @@ export function useShoppingList() {
     if (user) fetchItems();
   }, [user]);
 
-  const createItem = async (name, amount, unit, isShared) => {
+  const createItem = async (name, amount, isShared, fromRecipeId = null) => {
     const data = {
       name,
-      amount: amount || null,
-      unit: unit || '',
+      amount: amount || '',
       status: 'open',
       shared: isShared,
       owner: user.id,
     };
+    if (fromRecipeId) data.fromRecipe = fromRecipeId;
+    
     try {
       const record = await pb.collection('shopping_items').create(data);
       setItems([record, ...items]);

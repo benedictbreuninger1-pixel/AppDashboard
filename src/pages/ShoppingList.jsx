@@ -8,16 +8,14 @@ export default function ShoppingListPage() {
   const { items, loading, createItem, toggleStatus, deleteItem } = useShoppingList();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
-  const [unit, setUnit] = useState('');
   const [isShared, setIsShared] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    createItem(name, amount, unit, isShared);
+    createItem(name, amount, isShared);
     setName('');
     setAmount('');
-    setUnit('');
     setIsShared(false);
   };
 
@@ -35,28 +33,20 @@ export default function ShoppingListPage() {
 
         {/* Add Item Form */}
         <form onSubmit={handleSubmit} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-3">
-          <input
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Was einkaufen?"
-            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-200 focus:border-transparent outline-none"
-          />
-          
           <div className="flex gap-2">
             <input
-              type="number"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              placeholder="Menge"
-              className="w-24 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-200 outline-none"
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Was einkaufen?"
+              className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-200 focus:border-transparent outline-none"
             />
             <input
               type="text"
-              value={unit}
-              onChange={e => setUnit(e.target.value)}
-              placeholder="Einheit (kg, Stk...)"
-              className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-200 outline-none"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              placeholder="Menge (z.B. 2kg, 500g)"
+              className="w-40 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-200 outline-none"
             />
             <button
               type="submit"
@@ -97,10 +87,8 @@ export default function ShoppingListPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
                       <span className="text-slate-800 font-medium">{item.name}</span>
-                      {(item.amount || item.unit) && (
-                        <span className="text-xs text-slate-500">
-                          {item.amount} {item.unit}
-                        </span>
+                      {item.amount && (
+                        <span className="text-xs text-slate-500">{item.amount}</span>
                       )}
                     </div>
                     {item.shared && (

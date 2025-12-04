@@ -1,24 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Edit2, Trash2, Save, X } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, Save, X, ShoppingCart } from 'lucide-react';
 import { pb, POCKETBASE_URL } from '../lib/pocketbase';
 import { useRecipes } from '../hooks/useData';
+import { useShoppingList } from '../hooks/useShoppingList';
 import { FadeIn } from '../components/PageTransition';
 
 export default function RecipeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { updateRecipe, deleteRecipe } = useRecipes();
+  const { createItem } = useShoppingList();
   
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [showIngredientsModal, setShowIngredientsModal] = useState(false);
   
   // Edit State
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editIngredients, setEditIngredients] = useState('');
   const [editSteps, setEditSteps] = useState('');
+  const [editTags, setEditTags] = useState('');
+  
+  // Ingredients Selection
+  const [selectedIngredients, setSelectedIngredients] = useState([]);
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -29,6 +36,7 @@ export default function RecipeDetailPage() {
         setEditDescription(record.description || '');
         setEditIngredients(record.ingredients || '');
         setEditSteps(record.steps || '');
+        setEditTags(record.tags || '');
       } catch (err) {
         console.error('Rezept laden fehlgeschlagen:', err);
         navigate('/recipes');
@@ -46,6 +54,7 @@ export default function RecipeDetailPage() {
     formData.append('description', editDescription);
     formData.append('ingredients', editIngredients);
     formData.append('steps', editSteps);
+    formData.append('tags', editTags);
     
     const updated = await updateRecipe(id, formData);
     setRecipe(updated);
@@ -57,6 +66,28 @@ export default function RecipeDetailPage() {
       await deleteRecipe(id);
       navigate('/recipes');
     }
+  };
+  
+  const handleAddToShoppingList = () => {
+    if (!recipe.ingredients) return;
+    const lines = recipe.ingredients.split('\n').filter(l => l.trim());
+    setSelectedIngredients(lines.map((_, i) => i));
+    setShowIngredientsModal(true);
+  };
+  
+  const handleConfirmIngredients = async () => {
+    const lines = recipe.ingredients.split('\n').filter(l => l.trim());
+    for (const idx of selectedIngredients) {
+      await createItem(lines[idx], '', false, id);
+    }
+    setShowIngredientsModal(false);
+    setSelectedIngredients([]);
+  };
+  
+  const toggleIngredient = (idx) => {
+    setSelectedIngredients(prev => 
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+    );
   };
 
   if (loading) {
@@ -88,6 +119,12 @@ export default function RecipeDetailPage() {
           
           {!isEditing && (
             <div className="flex gap-2">
+              <button 
+                onClick={handleAddToShoppingList}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <ShoppingCart size={16} /> Einkaufen
+              </button>
               <button 
                 onClick={() => setIsEditing(true)}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
@@ -122,6 +159,17 @@ export default function RecipeDetailPage() {
               className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[60px] focus:ring-2 focus:ring-brand-200 outline-none"
               placeholder="Kurze Beschreibung (optional)"
             />
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Tags</label>
+              <input
+                type="text"
+                value={editTags}
+                onChange={e => setEditTags(e.target.value)}
+                className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none focus:ring-2 focus:ring-brand-200 outline-none"
+                placeholder="Vegan, Schnell, Dessert"
+              />
+            </div>
             
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Zutaten</label>
@@ -178,6 +226,15 @@ export default function RecipeDetailPage() {
               {recipe.description && (
                 <p className="text-slate-600">{recipe.description}</p>
               )}
+              {recipe.tags && (
+                <div className="flex gap-2 flex-wrap mt-3">
+                  {recipe.tags.split(',').map((tag, i) => (
+                    <span key={i} className="text-xs bg-brand-100 text-brand-600 px-3 py-1 rounded-full">
+                      {tag.trim()}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             
             {/* Ingredients */}
@@ -199,6 +256,45 @@ export default function RecipeDetailPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+        
+        {/* Ingredients Modal */}
+        {showIngredientsModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowIngredientsModal(false)}>
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <h2 className="text-xl font-bold text-slate-800 mb-4">Zur Einkaufsliste hinzufügen</h2>
+              
+              <div className="space-y-2 mb-6">
+                {recipe.ingredients.split('\n').filter(l => l.trim()).map((line, idx) => (
+                  <label key={idx} className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={selectedIngredients.includes(idx)}
+                      onChange={() => toggleIngredient(idx)}
+                      className="w-5 h-5 text-brand-500 rounded focus:ring-brand-400"
+                    />
+                    <span className="text-sm text-slate-700">{line}</span>
+                  </label>
+                ))}
+              </div>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={handleConfirmIngredients}
+                  disabled={selectedIngredients.length === 0}
+                  className="flex-1 bg-brand-400 text-white py-2 rounded-lg hover:bg-brand-500 disabled:opacity-50 transition-colors"
+                >
+                  Hinzufügen ({selectedIngredients.length})
+                </button>
+                <button
+                  onClick={() => setShowIngredientsModal(false)}
+                  className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
