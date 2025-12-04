@@ -28,7 +28,7 @@ export default function ShoppingListPage() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-slate-800 mb-1">Einkaufsliste</h1>
-          <p className="text-slate-500 text-sm">Was brauchen wir?</p>
+          <p className="text-slate-500 text-sm">Was fehlt — außer Motivation?</p>
         </div>
 
         {/* Add Item Form */}

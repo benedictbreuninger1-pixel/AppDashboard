@@ -30,7 +30,7 @@ export default function TodosPage() {
         <header className="space-y-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">Aufgaben</h1>
-            <p className="text-slate-500 text-sm">Deine To-dos im Überblick</p>
+            <p className="text-slate-500 text-sm">Produktiv tun. Aufgabe eintragen.</p>
           </div>
           
           <div className="flex bg-slate-100 rounded-lg p-1 w-fit">

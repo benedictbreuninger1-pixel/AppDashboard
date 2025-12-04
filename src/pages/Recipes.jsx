@@ -62,7 +62,7 @@ export default function RecipesPage() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">Rezepte</h1>
-            <p className="text-slate-500 text-sm">Eure gemeinsame Sammlung</p>
+            <p className="text-slate-500 text-sm">Eintragen. Kochen. Feiern.</p>
           </div>
           <button 
             onClick={() => setShowForm(!showForm)} 
