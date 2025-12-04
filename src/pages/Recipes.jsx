@@ -83,13 +83,13 @@ export default function RecipesPage() {
             />
             <input 
               className="w-full text-sm border-none focus:outline-none p-0 text-slate-600" 
-              placeholder="Tags (z.B. Vegan, Schnell, Dessert)" 
+              placeholder="Tags (z.B. Gut, Besser, am Besten)" 
               value={tags} 
               onChange={e => setTags(e.target.value)} 
             />
             <textarea 
               className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[80px] focus:ring-2 focus:ring-brand-200 outline-none" 
-              placeholder="Zutaten (eine Zeile pro Zutat oder Freitext)" 
+              placeholder="Zutaten (eine Zeile pro Zutat)" 
               value={ingredients} 
               onChange={e => setIngredients(e.target.value)} 
             />
@@ -157,7 +157,7 @@ export default function RecipesPage() {
           <SkeletonLoader type="recipe" count={4} />
         ) : filteredRecipes.length === 0 ? (
           <p className="text-center text-slate-400 py-8 text-sm">
-            {searchQuery || selectedTag ? 'Keine Rezepte gefunden' : 'Noch keine Rezepte'}
+            {searchQuery || selectedTag ? 'Keine Rezepte gefunden' : 'Noch keine Rezepte, geh kochen!'}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

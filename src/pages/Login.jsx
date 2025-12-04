@@ -33,7 +33,7 @@ export default function LoginPage() {
             <label className="block text-sm font-medium text-brand-600 mb-2">Benutzername</label>
             <input
               type="text" 
-              placeholder="Dein Username"
+              placeholder="Dein Benutzername"
               value={username} 
               onChange={e => setUsername(e.target.value)}
               autoComplete="username"

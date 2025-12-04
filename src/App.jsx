@@ -142,7 +142,7 @@ const Dashboard = () => {
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">
-              Hey {user?.name || user?.username || 'Bene'} 👋
+              Hey {user?.name || user?.username || 'Bene'} 
             </h1>
             <p className="text-slate-500 text-sm">Deine Übersicht für heute</p>
           </div>
