@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Edit2, Trash2, Save, X, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, Save, X, ShoppingCart, Heart } from 'lucide-react';
 import { pb, POCKETBASE_URL } from '../lib/pocketbase';
 import { useRecipes } from '../hooks/useData';
 import { useShoppingList } from '../hooks/useShoppingList';
@@ -9,7 +9,7 @@ import { FadeIn } from '../components/PageTransition';
 export default function RecipeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { updateRecipe, deleteRecipe } = useRecipes();
+  const { updateRecipe, deleteRecipe, toggleFavorite } = useRecipes();
   const { createItem } = useShoppingList();
   
   const [recipe, setRecipe] = useState(null);
@@ -23,6 +23,8 @@ export default function RecipeDetailPage() {
   const [editIngredients, setEditIngredients] = useState('');
   const [editSteps, setEditSteps] = useState('');
   const [editTags, setEditTags] = useState('');
+  const [newMainImage, setNewMainImage] = useState(null);
+  const [newExtraImages, setNewExtraImages] = useState([]);
   
   // Ingredients Selection
   const [selectedIngredients, setSelectedIngredients] = useState([]);
@@ -55,9 +57,13 @@ export default function RecipeDetailPage() {
     formData.append('ingredients', editIngredients);
     formData.append('steps', editSteps);
     formData.append('tags', editTags);
+    if (newMainImage) formData.append('mainImage', newMainImage);
+    newExtraImages.forEach(file => formData.append('extraImages', file));
     
     const updated = await updateRecipe(id, formData);
     setRecipe(updated);
+    setNewMainImage(null);
+    setNewExtraImages([]);
     setIsEditing(false);
   };
 
@@ -66,6 +72,11 @@ export default function RecipeDetailPage() {
       await deleteRecipe(id);
       navigate('/recipes');
     }
+  };
+  
+  const handleToggleFavorite = async () => {
+    await toggleFavorite(id, recipe.isFavorite);
+    setRecipe(prev => ({ ...prev, isFavorite: !prev.isFavorite }));
   };
   
   const handleAddToShoppingList = () => {
@@ -119,6 +130,16 @@ export default function RecipeDetailPage() {
           
           {!isEditing && (
             <div className="flex gap-2">
+              <button 
+                onClick={handleToggleFavorite}
+                className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-pink-50 rounded-lg transition-colors"
+              >
+                <Heart 
+                  size={16} 
+                  className={recipe.isFavorite ? 'text-pink-500' : 'text-slate-400'}
+                  fill={recipe.isFavorite ? 'currentColor' : 'none'}
+                />
+              </button>
               <button 
                 onClick={handleAddToShoppingList}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
@@ -191,6 +212,30 @@ export default function RecipeDetailPage() {
               />
             </div>
             
+            {/* Image Uploads */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
+                📷 {newMainImage ? 'Neues Hauptbild gewählt' : 'Hauptbild ändern (optional)'}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={e => setNewMainImage(e.target.files[0])} 
+                />
+              </label>
+              
+              <label className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
+                🖼️ {newExtraImages.length > 0 ? `${newExtraImages.length} neue Zusatzbilder` : 'Zusatzbilder ändern (max 3)'}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  multiple
+                  className="hidden" 
+                  onChange={e => setNewExtraImages(Array.from(e.target.files).slice(0, 3))} 
+                />
+              </label>
+            </div>
+            
             <div className="flex gap-2 pt-2">
               <button
                 onClick={handleSave}
@@ -199,7 +244,11 @@ export default function RecipeDetailPage() {
                 <Save size={16} /> Speichern
               </button>
               <button
-                onClick={() => setIsEditing(false)}
+                onClick={() => {
+                  setIsEditing(false);
+                  setNewMainImage(null);
+                  setNewExtraImages([]);
+                }}
                 className="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors"
               >
                 <X size={16} /> Abbrechen
@@ -209,14 +258,29 @@ export default function RecipeDetailPage() {
         ) : (
           // VIEW MODE
           <div className="space-y-6">
-            {/* Image */}
-            {recipe.image && (
+            {/* Main Image */}
+            {recipe.mainImage && (
               <div className="rounded-2xl overflow-hidden shadow-sm">
                 <img 
-                  src={`${POCKETBASE_URL}/api/files/${recipe.collectionId}/${recipe.id}/${recipe.image}`} 
+                  src={`${POCKETBASE_URL}/api/files/${recipe.collectionId}/${recipe.id}/${recipe.mainImage}`} 
                   alt={recipe.title}
                   className="w-full h-64 object-cover"
                 />
+              </div>
+            )}
+            
+            {/* Extra Images Gallery */}
+            {recipe.extraImages && recipe.extraImages.length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {recipe.extraImages.map((img, idx) => (
+                  <div key={idx} className="rounded-lg overflow-hidden shadow-sm aspect-square">
+                    <img 
+                      src={`${POCKETBASE_URL}/api/files/${recipe.collectionId}/${recipe.id}/${img}`} 
+                      alt={`${recipe.title} ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
               </div>
             )}
             

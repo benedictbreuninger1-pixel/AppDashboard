@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, Outlet } from 'react-router-dom';
-import { Home, CheckSquare, BookOpen, LogOut, User, ShoppingCart } from 'lucide-react';
+import { Home, CheckSquare, BookOpen, LogOut, User, ShoppingCart, Settings as SettingsIcon } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FadeIn } from './components/PageTransition';
 import { pb, POCKETBASE_URL } from './lib/pocketbase';
@@ -9,6 +9,7 @@ import TodosPage from './pages/Todos';
 import RecipesPage from './pages/Recipes';
 import RecipeDetailPage from './pages/RecipeDetail';
 import ShoppingListPage from './pages/ShoppingList';
+import SettingsPage from './pages/Settings';
 
 // --- PROTECTED ROUTE WRAPPER ---
 const ProtectedRoute = () => {
@@ -74,6 +75,14 @@ const BottomNav = () => {
             onClick={e => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold text-slate-800">Account</h3>
+            <Link
+              to="/settings"
+              onClick={() => setShowLogoutMenu(false)}
+              className="w-full flex items-center gap-3 px-4 py-3 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+            >
+              <SettingsIcon size={20} />
+              <span>Einstellungen</span>
+            </Link>
             <button
               onClick={() => {
                 logout();
@@ -122,6 +131,14 @@ const Sidebar = () => {
             </Link>
            )
         })}
+        
+        <Link 
+          to="/settings" 
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${location.pathname === '/settings' ? 'bg-brand-100 text-brand-600' : 'text-slate-600 hover:bg-slate-50'}`}
+        >
+          <SettingsIcon size={20} /> 
+          <span className="font-medium">Einstellungen</span>
+        </Link>
       </div>
 
       <div className="border-t pt-4 mt-auto">
@@ -314,6 +331,7 @@ export default function App() {
             <Route path="/recipes" element={<RecipesPage />} />
             <Route path="/recipes/:id" element={<RecipeDetailPage />} />
             <Route path="/shopping" element={<ShoppingListPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

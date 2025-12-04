@@ -91,5 +91,5 @@ export function useRecipes() {
     await pb.collection('recipes').delete(id);
   };
 
-  return { recipes, loading, createRecipe, updateRecipe, deleteRecipe };                                     
+  return { recipes, loading, createRecipe, updateRecipe, deleteRecipe };                                    
 }

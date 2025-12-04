@@ -1,23 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import { useRecipes } from '../hooks/useData';
 import { POCKETBASE_URL } from '../lib/pocketbase';
-import { Plus, X, Search } from 'lucide-react';
+import { Plus, X, Search, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
 
 export default function RecipesPage() {
-  const { recipes, createRecipe, loading } = useRecipes();
+  const { recipes, createRecipe, toggleFavorite, loading } = useRecipes();
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState('');
   const [steps, setSteps] = useState('');
   const [tags, setTags] = useState('');
-  const [imageFile, setImageFile] = useState(null);
+  const [mainImageFile, setMainImageFile] = useState(null);
+  const [extraImagesFiles, setExtraImagesFiles] = useState([]);
   
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Alle verfügbaren Tags extrahieren
   const allTags = useMemo(() => {
@@ -33,26 +36,36 @@ export default function RecipesPage() {
   // Gefilterte Rezepte
   const filteredRecipes = useMemo(() => {
     return recipes.filter(r => {
-      const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (r.description && r.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                           (r.ingredients && r.ingredients.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesTag = !selectedTag || (r.tags && r.tags.split(',').map(t => t.trim()).includes(selectedTag));
-      return matchesSearch && matchesTag;
+      const matchesFavorite = !showFavoritesOnly || r.isFavorite;
+      return matchesSearch && matchesTag && matchesFavorite;
     });
-  }, [recipes, searchQuery, selectedTag]);
+  }, [recipes, searchQuery, selectedTag, showFavoritesOnly]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
     formData.append('title', title);
+    formData.append('description', description);
     formData.append('ingredients', ingredients);
     formData.append('steps', steps);
     formData.append('tags', tags);
-    if (imageFile) formData.append('image', imageFile);
+    if (mainImageFile) formData.append('mainImage', mainImageFile);
+    extraImagesFiles.forEach(file => {
+      formData.append('extraImages', file);
+    });
+    
     await createRecipe(formData);
     setTitle(''); 
+    setDescription('');
     setIngredients(''); 
     setSteps('');
     setTags('');
-    setImageFile(null); 
+    setMainImageFile(null);
+    setExtraImagesFiles([]);
     setShowForm(false);
   };
 
@@ -62,7 +75,7 @@ export default function RecipesPage() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">Rezepte</h1>
-            <p className="text-slate-500 text-sm">Eintragen. Kochen. Feiern.</p>
+            <p className="text-slate-500 text-sm">Eure gemeinsame Sammlung</p>
           </div>
           <button 
             onClick={() => setShowForm(!showForm)} 
@@ -83,13 +96,13 @@ export default function RecipesPage() {
             />
             <input 
               className="w-full text-sm border-none focus:outline-none p-0 text-slate-600" 
-              placeholder="Tags (z.B. Gut, Besser, am Besten)" 
+              placeholder="Tags (z.B. Vegan, Schnell, Dessert)" 
               value={tags} 
               onChange={e => setTags(e.target.value)} 
             />
             <textarea 
               className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[80px] focus:ring-2 focus:ring-brand-200 outline-none" 
-              placeholder="Zutaten (eine Zeile pro Zutat)" 
+              placeholder="Zutaten (eine Zeile pro Zutat oder Freitext)" 
               value={ingredients} 
               onChange={e => setIngredients(e.target.value)} 
             />
@@ -132,56 +145,79 @@ export default function RecipesPage() {
             />
           </div>
           
-          {allTags.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setSelectedTag('')}
-                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${!selectedTag ? 'bg-brand-400 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-              >
-                Alle
-              </button>
-              {allTags.map(tag => (
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full transition-colors ${showFavoritesOnly ? 'bg-pink-100 text-pink-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            >
+              <Heart size={12} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
+              Favoriten
+            </button>
+            
+            {allTags.length > 0 && (
+              <>
                 <button
-                  key={tag}
-                  onClick={() => setSelectedTag(tag)}
-                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${selectedTag === tag ? 'bg-brand-400 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  onClick={() => setSelectedTag('')}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${!selectedTag ? 'bg-brand-400 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                 >
-                  {tag}
+                  Alle Tags
                 </button>
-              ))}
-            </div>
-          )}
+                {allTags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setSelectedTag(tag)}
+                    className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${selectedTag === tag ? 'bg-brand-400 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
         </div>
 
         {loading ? (
           <SkeletonLoader type="recipe" count={4} />
         ) : filteredRecipes.length === 0 ? (
           <p className="text-center text-slate-400 py-8 text-sm">
-            {searchQuery || selectedTag ? 'Keine Rezepte gefunden' : 'Noch keine Rezepte, geh kochen!'}
+            {searchQuery || selectedTag ? 'Keine Rezepte gefunden' : 'Noch keine Rezepte'}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filteredRecipes.map(r => (
-              <Link 
-                key={r.id} 
-                to={`/recipes/${r.id}`}
-                className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow block"
-              >
-                {r.image && <img src={`${POCKETBASE_URL}/api/files/${r.collectionId}/${r.id}/${r.image}`} alt={r.title} className="w-full h-32 object-cover" />}
-                <div className="p-4">
-                    <h3 className="font-bold text-slate-800 mb-2">{r.title}</h3>
-                    {r.tags && (
-                      <div className="flex gap-1 flex-wrap mb-2">
-                        {r.tags.split(',').map((tag, i) => (
-                          <span key={i} className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">
-                            {tag.trim()}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <p className="text-xs text-slate-500 line-clamp-3">{r.ingredients}</p>
-                </div>
-              </Link>
+              <div key={r.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow relative">
+                <Link to={`/recipes/${r.id}`} className="block">
+                  {r.mainImage && <img src={`${POCKETBASE_URL}/api/files/${r.collectionId}/${r.id}/${r.mainImage}`} alt={r.title} className="w-full h-32 object-cover" />}
+                  <div className="p-4">
+                      <h3 className="font-bold text-slate-800 mb-2">{r.title}</h3>
+                      {r.tags && (
+                        <div className="flex gap-1 flex-wrap mb-2">
+                          {r.tags.split(',').map((tag, i) => (
+                            <span key={i} className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">
+                              {tag.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-slate-500 line-clamp-3">{r.ingredients}</p>
+                  </div>
+                </Link>
+                
+                {/* Favorite Button */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    toggleFavorite(r.id, r.isFavorite);
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
+                >
+                  <Heart 
+                    size={18} 
+                    className={r.isFavorite ? 'text-pink-500' : 'text-slate-400'}
+                    fill={r.isFavorite ? 'currentColor' : 'none'}
+                  />
+                </button>
+              </div>
             ))}
           </div>
         )}

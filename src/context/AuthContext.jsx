@@ -5,12 +5,10 @@ import { pb } from '../lib/pocketbase';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // WICHTIG: Hier ändern! Das "pb.authStore.model" muss direkt in die Klammer:
   const [user, setUser] = useState(pb.authStore.model);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Hier KEIN setUser mehr aufrufen! Nur noch den Listener:
     const unsubscribe = pb.authStore.onChange((token, model) => {
       setUser(model);
       setLoading(false);
@@ -36,8 +34,24 @@ export const AuthProvider = ({ children }) => {
     pb.authStore.clear();
   };
 
+  const changePassword = async (oldPassword, newPassword) => {
+    try {
+      await pb.collection('users').update(user.id, {
+        oldPassword,
+        password: newPassword,
+        passwordConfirm: newPassword,
+      });
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.oldPassword?.message || error.message || 'Passwort ändern fehlgeschlagen'
+      };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, changePassword }}>
       {children}
     </AuthContext.Provider>
   );
