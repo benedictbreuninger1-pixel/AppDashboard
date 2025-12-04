@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { Home, CheckSquare, BookOpen, LogOut, User } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { FadeIn } from './components/PageTransition';
 import LoginPage from './pages/Login';
 import TodosPage from './pages/Todos';
 import RecipesPage from './pages/Recipes';
@@ -96,33 +97,35 @@ const Sidebar = () => {
 const Dashboard = () => {
     const { user } = useAuth();
     return (
-      <div className="max-w-2xl mx-auto p-6 space-y-6">
-        <h1 className="text-2xl font-bold text-slate-800">
-            Hallo {user?.name || user?.username || 'Bene'}! 👋
-        </h1>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <Link 
-            to="/todos" 
-            className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center aspect-square hover:border-brand-300 hover:shadow-md transition-all group"
-          >
-            <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center mb-3 text-brand-500 group-hover:bg-brand-200 transition-colors">
-                <CheckSquare size={24} />
-            </div>
-            <span className="font-semibold text-slate-700">Todos</span>
-          </Link>
+      <FadeIn>
+        <div className="max-w-2xl mx-auto p-6 space-y-6">
+          <h1 className="text-2xl font-bold text-slate-800">
+              Hallo {user?.name || user?.username || 'Bene'}! 👋
+          </h1>
           
-          <Link 
-            to="/recipes" 
-            className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center aspect-square hover:border-brand-300 hover:shadow-md transition-all group"
-          >
-            <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center mb-3 text-brand-500 group-hover:bg-brand-200 transition-colors">
-                <BookOpen size={24} />
-            </div>
-            <span className="font-semibold text-slate-700">Rezepte</span>
-          </Link>
+          <div className="grid grid-cols-2 gap-4">
+            <Link 
+              to="/todos" 
+              className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center aspect-square hover:border-brand-300 hover:shadow-md transition-all group"
+            >
+              <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center mb-3 text-brand-500 group-hover:bg-brand-200 transition-colors">
+                  <CheckSquare size={24} />
+              </div>
+              <span className="font-semibold text-slate-700">Todos</span>
+            </Link>
+            
+            <Link 
+              to="/recipes" 
+              className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center aspect-square hover:border-brand-300 hover:shadow-md transition-all group"
+            >
+              <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center mb-3 text-brand-500 group-hover:bg-brand-200 transition-colors">
+                  <BookOpen size={24} />
+              </div>
+              <span className="font-semibold text-slate-700">Rezepte</span>
+            </Link>
+          </div>
         </div>
-      </div>
+      </FadeIn>
     );
   };
 
