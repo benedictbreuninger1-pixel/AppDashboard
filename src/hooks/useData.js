@@ -10,7 +10,6 @@ export function useTodos() {
 
   const fetchTodos = async () => {
     try {
-      // Sortiert nach Erstellung (neueste oben)
       const records = await pb.collection('todos').getFullList({ sort: '-created' });
       setTodos(records);
     } catch (e) {
@@ -41,7 +40,6 @@ export function useTodos() {
 
   const toggleTodo = async (id, currentStatus) => {
     const newStatus = currentStatus === 'open' ? 'done' : 'open';
-    // Optimistic Update (Sofort in der UI ändern)
     setTodos(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
     await pb.collection('todos').update(id, { status: newStatus });
   };
@@ -81,10 +79,19 @@ export function useRecipes() {
     setRecipes([record, ...recipes]);
   };
 
+  // ✨ NEU: Update-Funktion
+  const updateRecipe = async (id, formData) => {
+    const record = await pb.collection('recipes').update(id, formData);
+    setRecipes(prev => prev.map(r => r.id === id ? record : r));
+    return record;
+  };
+
   const deleteRecipe = async (id) => {
     setRecipes(prev => prev.filter(r => r.id !== id));
     await pb.collection('recipes').delete(id);
   };
 
-  return { recipes, loading, createRecipe, deleteRecipe };
+  return { recipes, loading, createRecipe, updateRecipe, deleteRecipe };
+  //                                        ^^^^^^^^^^^^
+  //                                        NEU!
 }

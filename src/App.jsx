@@ -1,12 +1,14 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, Outlet } from 'react-router-dom';
-import { Home, CheckSquare, BookOpen, LogOut, User } from 'lucide-react';
+import { Home, CheckSquare, BookOpen, LogOut, User, ShoppingCart } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FadeIn } from './components/PageTransition';
 import { pb } from './lib/pocketbase';
 import LoginPage from './pages/Login';
 import TodosPage from './pages/Todos';
 import RecipesPage from './pages/Recipes';
+import RecipeDetailPage from './pages/RecipeDetail';
+import ShoppingListPage from './pages/ShoppingList';
 
 // --- PROTECTED ROUTE WRAPPER ---
 const ProtectedRoute = () => {
@@ -29,6 +31,7 @@ const NavLinks = [
   { to: '/', icon: Home, label: 'Start' },
   { to: '/todos', icon: CheckSquare, label: 'Todos' },
   { to: '/recipes', icon: BookOpen, label: 'Rezepte' },
+  { to: '/shopping', icon: ShoppingCart, label: 'Einkaufen' },
 ];
 
 const BottomNav = () => {
@@ -251,6 +254,8 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/todos" element={<TodosPage />} />
             <Route path="/recipes" element={<RecipesPage />} />
+            <Route path="/recipes/:id" element={<RecipeDetailPage />} />
+            <Route path="/shopping" element={<ShoppingListPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useRecipes } from '../hooks/useData';
 import { POCKETBASE_URL } from '../lib/pocketbase';
-import { Plus, Trash2, Image as ImageIcon, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
 
 export default function RecipesPage() {
-  const { recipes, createRecipe, deleteRecipe, loading } = useRecipes();
+  const { recipes, createRecipe, loading } = useRecipes();
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [ingredients, setIngredients] = useState('');
@@ -67,7 +68,7 @@ export default function RecipesPage() {
             />
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
-                <ImageIcon size={16} /> {imageFile ? 'Bild da' : 'Bild?'}
+                📷 {imageFile ? 'Bild da' : 'Bild?'}
                 <input 
                   type="file" 
                   accept="image/*" 
@@ -92,19 +93,17 @@ export default function RecipesPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {recipes.map(r => (
-              <div key={r.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+              <Link 
+                key={r.id} 
+                to={`/recipes/${r.id}`}
+                className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow block"
+              >
                 {r.image && <img src={`${POCKETBASE_URL}/api/files/${r.collectionId}/${r.id}/${r.image}`} alt={r.title} className="w-full h-32 object-cover" />}
                 <div className="p-4 relative">
                     <h3 className="font-bold text-slate-800 mb-2">{r.title}</h3>
-                    <button 
-                      onClick={() => deleteRecipe(r.id)} 
-                      className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
                     <p className="text-xs text-slate-500 line-clamp-3">{r.ingredients}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
