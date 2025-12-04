@@ -86,13 +86,19 @@ export default function RecipesPage() {
         </div>
 
         {showForm && (
-          <form onSubmit={handleSubmit} className="bg-white p-4 rounded-2xl shadow-sm border border-brand-100 space-y-4">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-100 space-y-4">
             <input 
               className="w-full font-semibold border-none focus:outline-none p-0 text-slate-800" 
               placeholder="Rezept Name" 
               value={title} 
               onChange={e => setTitle(e.target.value)} 
               required 
+            />
+            <textarea 
+              className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[60px] focus:ring-2 focus:ring-brand-200 outline-none" 
+              placeholder="Kurze Beschreibung (optional)" 
+              value={description} 
+              onChange={e => setDescription(e.target.value)} 
             />
             <input 
               className="w-full text-sm border-none focus:outline-none p-0 text-slate-600" 
@@ -102,7 +108,7 @@ export default function RecipesPage() {
             />
             <textarea 
               className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[80px] focus:ring-2 focus:ring-brand-200 outline-none" 
-              placeholder="Zutaten (eine Zeile pro Zutat oder Freitext)" 
+              placeholder="Zutaten (eine Zeile pro Zutat)" 
               value={ingredients} 
               onChange={e => setIngredients(e.target.value)} 
             />
@@ -112,24 +118,48 @@ export default function RecipesPage() {
               value={steps} 
               onChange={e => setSteps(e.target.value)} 
             />
-            <div className="flex items-center gap-4">
+            
+            {/* Image Uploads */}
+            <div className="space-y-2">
               <label className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
-                📷 {imageFile ? 'Bild da' : 'Bild?'}
+                📷 {mainImageFile ? 'Hauptbild gewählt' : 'Hauptbild (optional)'}
                 <input 
                   type="file" 
                   accept="image/*" 
                   className="hidden" 
-                  onChange={e => setImageFile(e.target.files[0])} 
+                  onChange={e => setMainImageFile(e.target.files[0])} 
                 />
               </label>
+              
+              <label className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
+                🖼️ {extraImagesFiles.length > 0 ? `${extraImagesFiles.length} Zusatzbilder` : 'Zusatzbilder (max 3, optional)'}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  multiple
+                  className="hidden" 
+                  onChange={e => setExtraImagesFiles(Array.from(e.target.files).slice(0, 3))} 
+                />
+              </label>
+            </div>
+            
+            <div className="flex gap-2 pt-2">
               <button 
-                type="submit" 
-                className="ml-auto bg-brand-400 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-500 active:bg-brand-600 transition-colors"
+                type="button"
+                onClick={handleSubmit}
+                className="flex-1 bg-brand-400 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-500 active:bg-brand-600 transition-colors"
               >
                 Speichern
               </button>
+              <button 
+                type="button" 
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm hover:bg-slate-300 transition-colors"
+              >
+                Abbrechen
+              </button>
             </div>
-          </form>
+          </div>
         )}
 
         {/* Search & Filter */}
