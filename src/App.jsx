@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, Outlet } fro
 import { Home, CheckSquare, BookOpen, LogOut, User } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FadeIn } from './components/PageTransition';
+import { pb } from './lib/pocketbase';
 import LoginPage from './pages/Login';
 import TodosPage from './pages/Todos';
 import RecipesPage from './pages/Recipes';
@@ -96,14 +97,123 @@ const Sidebar = () => {
 // --- DASHBOARD ---
 const Dashboard = () => {
     const { user } = useAuth();
+    const [stats, setStats] = React.useState({ todos: 0, todosOpen: 0, recipes: 0 });
+    const [quickTodos, setQuickTodos] = React.useState([]);
+    const [randomRecipe, setRandomRecipe] = React.useState(null);
+    
+    React.useEffect(() => {
+      const fetchDashboardData = async () => {
+        try {
+          // Fetch Todos
+          const todosData = await pb.collection('todos').getFullList();
+          const openTodos = todosData.filter(t => t.status === 'open');
+          
+          // Fetch Recipes
+          const recipesData = await pb.collection('recipes').getFullList({ sort: '-updated' });
+          
+          setStats({
+            todos: todosData.length,
+            todosOpen: openTodos.length,
+            recipes: recipesData.length,
+          });
+          
+          // Quick-Access: Nächste 3 offene Todos
+          setQuickTodos(openTodos.slice(0, 3));
+          
+          // Zufälliges Rezept des Tages
+          if (recipesData.length > 0) {
+            const random = recipesData[Math.floor(Math.random() * recipesData.length)];
+            setRandomRecipe(random);
+          }
+        } catch (err) {
+          console.error('Dashboard Daten laden fehlgeschlagen:', err);
+        }
+      };
+      
+      if (user) fetchDashboardData();
+    }, [user]);
+    
     return (
       <FadeIn>
-        <div className="max-w-2xl mx-auto p-6 space-y-6">
-          <h1 className="text-2xl font-bold text-slate-800">
-              Hallo {user?.name || user?.username || 'Bene'}! 👋
-          </h1>
+        <div className="max-w-2xl mx-auto p-6 space-y-8 pb-24">
+          {/* Header */}
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800 mb-1">
+              Hey {user?.name || user?.username || 'Bene'} 👋
+            </h1>
+            <p className="text-slate-500 text-sm">Deine Übersicht für heute</p>
+          </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+              <div className="text-2xl font-bold text-brand-500">{stats.todosOpen}</div>
+              <div className="text-xs text-slate-500 mt-1">offene Todos</div>
+            </div>
+            
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+              <div className="text-2xl font-bold text-brand-500">{stats.recipes}</div>
+              <div className="text-xs text-slate-500 mt-1">Rezepte</div>
+            </div>
+            
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+              <div className="text-2xl font-bold text-brand-500">{stats.todos}</div>
+              <div className="text-xs text-slate-500 mt-1">Todos total</div>
+            </div>
+          </div>
+          
+          {/* Quick Access: Nächste Todos */}
+          {quickTodos.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-700">Anstehende Aufgaben</h2>
+                <Link to="/todos" className="text-xs text-brand-500 hover:text-brand-600">Alle →</Link>
+              </div>
+              <div className="space-y-2">
+                {quickTodos.map(todo => (
+                  <Link 
+                    key={todo.id} 
+                    to="/todos"
+                    className="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-100 hover:border-brand-200 transition-colors group"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-brand-400 group-hover:bg-brand-500" />
+                    <span className="text-sm text-slate-700 flex-1 truncate">{todo.title}</span>
+                    {todo.shared && (
+                      <span className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">Gemeinsam</span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Rezept des Tages */}
+          {randomRecipe && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-slate-700">Rezept des Tages</h2>
+              <Link 
+                to="/recipes"
+                className="block bg-gradient-to-br from-brand-50 to-pink-50 p-4 rounded-xl border border-brand-100 hover:shadow-md transition-all group"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-2xl shadow-sm">
+                    🍽️
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-slate-800 group-hover:text-brand-600 transition-colors">
+                      {randomRecipe.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                      {randomRecipe.ingredients?.slice(0, 80)}...
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          )}
+          
+          {/* Hauptnavigation Cards */}
+          <div className="grid grid-cols-2 gap-4 pt-4">
             <Link 
               to="/todos" 
               className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center aspect-square hover:border-brand-300 hover:shadow-md transition-all group"

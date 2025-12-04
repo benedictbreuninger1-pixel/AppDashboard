@@ -31,8 +31,11 @@ export default function RecipesPage() {
   return (
     <FadeIn>
       <div className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-slate-800">Rezepte</h1>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800 mb-1">Rezepte</h1>
+            <p className="text-slate-500 text-sm">Eure gemeinsame Sammlung</p>
+          </div>
           <button 
             onClick={() => setShowForm(!showForm)} 
             className="bg-brand-400 text-white p-2 rounded-full shadow-lg shadow-brand-200 hover:bg-brand-500 active:bg-brand-600 transition-colors"
