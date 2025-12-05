@@ -43,7 +43,7 @@ export default function ShoppingListPage() {
   };
 
   const openItems = items.filter(item => item.status === 'open');
-  const boughtItems = items.filter(item => item.status === 'bought');
+  const boughtItems = items.filter(item => item.status === 'done');
 
   return (
     <FadeIn>

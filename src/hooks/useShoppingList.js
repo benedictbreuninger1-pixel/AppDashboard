@@ -55,7 +55,7 @@ export function useShoppingList() {
   };
 
   const toggleStatus = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'open' ? 'bought' : 'open';
+    const newStatus = currentStatus === 'open' ? 'done' : 'open';
     // Optimistic Update
     setItems((prev) => prev.map(item => item.id === id ? { ...item, status: newStatus } : item));
     
