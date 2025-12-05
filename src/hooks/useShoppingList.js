@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { pb } from '../lib/pocketbase';
-import { useAuth } from '../context/AuthContext'; // Geändert
-import { formatError } from '../lib/utils';
+import { useState, useEffect, useCallback } from "react";
+import { pb } from "../lib/pocketbase";
+import { useAuth } from "../context/AuthContext"; // Geändert
+import { formatError } from "../lib/utils";
 
 export function useShoppingList() {
   const { user } = useAuth(); // Geändert
@@ -15,10 +15,10 @@ export function useShoppingList() {
     setError(null);
     try {
       // Sort: -status (damit 'open' oben steht), neueste zuerst
-      const result = await pb.collection('shopping_items').getList(1, 200, { 
-        sort: '-status,-created',
+      const result = await pb.collection("shopping_items").getList(1, 200, {
+        sort: "-status,-created",
         filter: `owner = "${user.id}" || shared = true`,
-        expand: 'fromRecipe'
+        expand: "fromRecipe",
       });
       setItems(result.items);
     } catch (err) {
@@ -36,63 +36,72 @@ export function useShoppingList() {
   const createItem = async (name, amount, isShared, fromRecipeId = null) => {
     const data = {
       name,
-      amount: amount || '',
-      status: 'open',
+      amount: amount || "",
+      status: "open",
       shared: isShared,
       owner: user.id,
     };
     if (fromRecipeId) data.fromRecipe = fromRecipeId;
-    
+
     try {
-      const record = await pb.collection('shopping_items').create(data);
+      const record = await pb.collection("shopping_items").create(data);
       setItems((prev) => [record, ...prev]);
       return { success: true };
     } catch (err) {
       const msg = formatError(err);
-      setError(msg);
+      // ❌ setError(msg);  // RAUS
       return { success: false, error: msg };
     }
   };
 
   const toggleStatus = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'open' ? 'done' : 'open';
+    const newStatus = currentStatus === "open" ? "done" : "open";
+
     // Optimistic Update
-    setItems((prev) => prev.map(item => item.id === id ? { ...item, status: newStatus } : item));
-    
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, status: newStatus } : item
+      )
+    );
+
     try {
-      await pb.collection('shopping_items').update(id, { status: newStatus });
+      await pb.collection("shopping_items").update(id, { status: newStatus });
       return { success: true };
     } catch (err) {
       // Rollback
-      setItems((prev) => prev.map(item => item.id === id ? { ...item, status: currentStatus } : item));
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, status: currentStatus } : item
+        )
+      );
       const msg = formatError(err);
-      setError(msg);
+      // ❌ setError(msg);  // RAUS
       return { success: false, error: msg };
     }
   };
 
   const deleteItem = async (id) => {
     const prevItems = [...items];
-    setItems((prev) => prev.filter(item => item.id !== id));
-    
+    setItems((prev) => prev.filter((item) => item.id !== id));
+
     try {
-      await pb.collection('shopping_items').delete(id);
+      await pb.collection("shopping_items").delete(id);
       return { success: true };
     } catch (err) {
       setItems(prevItems);
       const msg = formatError(err);
-      setError(msg);
+      // ❌ setError(msg);  // RAUS
       return { success: false, error: msg };
     }
   };
 
-  return { 
-    items, 
-    loading, 
-    error, 
-    refetch: fetchItems, 
-    createItem, 
-    toggleStatus, 
-    deleteItem 
+  return {
+    items,
+    loading,
+    error,
+    refetch: fetchItems,
+    createItem,
+    toggleStatus,
+    deleteItem,
   };
 }
