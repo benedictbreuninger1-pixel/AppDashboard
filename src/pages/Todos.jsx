@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { useTodos } from '../hooks/useTodos'; // NEU
-import { Plus, Trash2, Users, Lock, CheckSquare, AlertCircle } from 'lucide-react';
+import { useTodos } from '../hooks/useTodos';
+import { useToast } from '../context/ToastContext'; // NEU
+import { Plus, Trash2, Users, Lock, CheckSquare } from 'lucide-react';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
 
 export default function TodosPage() {
-  const { todos, createTodo, toggleTodo, deleteTodo, loading, error } = useTodos(); // NEU: error destructuring
+  const { todos, createTodo, toggleTodo, deleteTodo, loading } = useTodos();
+  const { showToast } = useToast(); // NEU
+  
   const [text, setText] = useState('');
   const [isShared, setIsShared] = useState(false);
   const [filter, setFilter] = useState('all');
 
-  const handleSubmit = async (e) => { // Async für Feedback
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!text.trim()) return;
     
@@ -19,11 +22,24 @@ export default function TodosPage() {
     if (res.success) {
         setText('');
         setIsShared(false);
-        // Hier könnte später stehen: toast.success("Todo erstellt");
+        showToast('Aufgabe hinzugefügt!', 'success'); // Toast
     } else {
-        // Hier könnte später stehen: toast.error(res.error);
-        console.error("Fehler:", res.error); 
+        showToast(res.error, 'error'); // Error Toast
     }
+  };
+
+  const handleToggle = async (id, status) => {
+     const res = await toggleTodo(id, status);
+     if (!res.success) showToast(res.error, 'error');
+  };
+
+  const handleDelete = async (id) => {
+     const res = await deleteTodo(id);
+     if (res.success) {
+         showToast('Aufgabe gelöscht', 'info');
+     } else {
+         showToast(res.error, 'error');
+     }
   };
 
   const filteredTodos = todos.filter(t => {
@@ -35,14 +51,7 @@ export default function TodosPage() {
   return (
     <FadeIn>
       <div className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
-        {/* Error Banner falls globaler Hook Fehler */}
-        {error && (
-             <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm">
-                 <AlertCircle size={16} /> {error}
-             </div>
-        )}
-
-        {/* ... Rest der UI (Header, Form) bleibt gleich ... */}
+        {/* Header (unverändert) */}
         <header className="space-y-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">Aufgaben</h1>
@@ -62,6 +71,7 @@ export default function TodosPage() {
           </div>
         </header>
 
+        {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 focus-within:ring-2 ring-brand-200">
           <div className="flex gap-2">
             <input 
@@ -88,6 +98,7 @@ export default function TodosPage() {
           </div>
         </form>
 
+        {/* List */}
         {loading ? (
           <SkeletonLoader type="todo" count={4} />
         ) : filteredTodos.length === 0 ? (
@@ -97,7 +108,7 @@ export default function TodosPage() {
             {filteredTodos.map(todo => (
               <div key={todo.id} className="group flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
                 <button 
-                  onClick={() => toggleTodo(todo.id, todo.status)} 
+                  onClick={() => handleToggle(todo.id, todo.status)} 
                   className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${todo.status === 'done' ? 'bg-brand-400 border-brand-400' : 'border-slate-300'}`}
                 >
                   {todo.status === 'done' && <CheckSquare size={14} className="text-white" />}
@@ -107,7 +118,7 @@ export default function TodosPage() {
                   {todo.shared && <span className="text-[10px] text-brand-500 flex items-center gap-1"><Users size={10}/> Gemeinsam</span>}
                 </div>
                 <button 
-                  onClick={() => deleteTodo(todo.id)} 
+                  onClick={() => handleDelete(todo.id)} 
                   className="text-slate-300 hover:text-red-500 p-2 transition-colors"
                 >
                   <Trash2 size={16} />

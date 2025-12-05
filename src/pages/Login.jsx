@@ -1,26 +1,30 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext'; // NEU
 import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   const { login } = useAuth();
+  const { showToast } = useToast(); // NEU
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
+    setIsLoading(true);
     
     const res = await login(username, password);
     
     if (res.success) {
+      showToast('Willkommen zurück!', 'success');
       navigate('/');
     } else {
-      setError('Login fehlgeschlagen. Benutzername oder Passwort falsch.');
+      showToast('Login fehlgeschlagen. Bitte Daten prüfen.', 'error');
     }
+    setIsLoading(false);
   };
 
   return (
@@ -52,14 +56,13 @@ export default function LoginPage() {
               className="w-full px-4 py-3 border border-brand-200 rounded-xl focus:ring-2 focus:ring-brand-300 focus:border-transparent outline-none transition-all"
             />
           </div>
-
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
           
           <button 
             type="submit" 
-            className="w-full bg-brand-400 text-white py-3 rounded-xl font-medium hover:bg-brand-500 active:bg-brand-600 transition-colors shadow-lg shadow-brand-200"
+            disabled={isLoading}
+            className="w-full bg-brand-400 text-white py-3 rounded-xl font-medium hover:bg-brand-500 active:bg-brand-600 disabled:opacity-70 transition-colors shadow-lg shadow-brand-200"
           >
-            Anmelden
+            {isLoading ? 'Melde an...' : 'Anmelden'}
           </button>
         </form>
       </div>

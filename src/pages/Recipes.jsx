@@ -1,13 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useRecipes } from '../hooks/useRecipes';
+import { useToast } from '../context/ToastContext'; // NEU
 import { POCKETBASE_URL } from '../lib/pocketbase';
-import { Plus, X, Search, Heart, AlertCircle } from 'lucide-react';
+import { Plus, X, Search, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
 
 export default function RecipesPage() {
-  const { recipes, createRecipe, toggleFavorite, loading, error } = useRecipes();
+  const { recipes, createRecipe, toggleFavorite, loading } = useRecipes();
+  const { showToast } = useToast(); // NEU
   const [showForm, setShowForm] = useState(false);
   
   // Form State
@@ -19,12 +21,11 @@ export default function RecipesPage() {
   const [mainImageFile, setMainImageFile] = useState(null);
   const [extraImagesFiles, setExtraImagesFiles] = useState([]);
   
-  // Search & Filter State
+  // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  // Alle Tags sammeln
   const allTags = useMemo(() => {
     const tagSet = new Set();
     recipes.forEach(r => {
@@ -35,7 +36,6 @@ export default function RecipesPage() {
     return Array.from(tagSet).sort();
   }, [recipes]);
 
-  // Filtern
   const filteredRecipes = useMemo(() => {
     return recipes.filter(r => {
       const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -58,6 +58,9 @@ export default function RecipesPage() {
     if (mainImageFile) formData.append('mainImage', mainImageFile);
     extraImagesFiles.forEach(file => formData.append('extraImages', file));
     
+    // Toast: Start Feedback (optional, aber bei Bilderupload nett)
+    // showToast('Speichere Rezept...', 'info'); 
+    
     const res = await createRecipe(formData);
     
     if (res.success) {
@@ -69,21 +72,21 @@ export default function RecipesPage() {
         setMainImageFile(null);
         setExtraImagesFiles([]);
         setShowForm(false);
+        showToast('Rezept erfolgreich erstellt', 'success'); // Toast Success
     } else {
-        alert("Fehler beim Erstellen: " + res.error);
+        showToast(res.error, 'error'); // Toast Error
     }
+  };
+  
+  const handleToggleFavorite = async (e, id, status) => {
+    e.preventDefault();
+    const res = await toggleFavorite(id, status);
+    if (!res.success) showToast(res.error, 'error');
   };
 
   return (
     <FadeIn>
       <div className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
-        {/* Error Anzeige */}
-        {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm mb-4">
-                <AlertCircle size={16} /> {error}
-            </div>
-        )}
-
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">Rezepte</h1>
@@ -97,7 +100,6 @@ export default function RecipesPage() {
           </button>
         </div>
 
-        {/* Create Form */}
         {showForm && (
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-100 space-y-4">
                  <input className="w-full font-semibold border-none focus:outline-none p-0 text-slate-800" placeholder="Rezept Name" value={title} onChange={e => setTitle(e.target.value)} required />
@@ -106,7 +108,6 @@ export default function RecipesPage() {
                  <textarea className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[80px] focus:ring-2 focus:ring-brand-200 outline-none" placeholder="Zutaten" value={ingredients} onChange={e => setIngredients(e.target.value)} />
                  <textarea className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[80px] focus:ring-2 focus:ring-brand-200 outline-none" placeholder="Zubereitungsschritte" value={steps} onChange={e => setSteps(e.target.value)} />
                  
-                 {/* Image Uploads */}
                  <div className="space-y-2">
                    <label className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
                      📷 {mainImageFile ? 'Hauptbild gewählt' : 'Hauptbild (optional)'}
@@ -126,7 +127,6 @@ export default function RecipesPage() {
             </div>
         )}
         
-        {/* Search & Filter UI (HIER WERDEN DIE VARIABLEN BENUTZT) */}
         <div className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -197,10 +197,7 @@ export default function RecipesPage() {
                   </div>
                 </Link>
                 <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    toggleFavorite(r.id, r.isFavorite);
-                  }}
+                  onClick={(e) => handleToggleFavorite(e, r.id, r.isFavorite)}
                   className="absolute top-2 right-2 p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
                 >
                   <Heart size={18} className={r.isFavorite ? 'text-pink-500' : 'text-slate-400'} fill={r.isFavorite ? 'currentColor' : 'none'} />

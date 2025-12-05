@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { Home, CheckSquare, BookOpen, LogOut, User, ShoppingCart, Settings as SettingsIcon } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext'; // NEU
 import { FadeIn } from './components/PageTransition';
 import { pb, POCKETBASE_URL } from './lib/pocketbase';
 import LoginPage from './pages/Login';
@@ -321,20 +322,22 @@ const Dashboard = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/todos" element={<TodosPage />} />
-            <Route path="/recipes" element={<RecipesPage />} />
-            <Route path="/recipes/:id" element={<RecipeDetailPage />} />
-            <Route path="/shopping" element={<ShoppingListPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <ToastProvider> {/* Provider hier eingefügt */}
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/todos" element={<TodosPage />} />
+              <Route path="/recipes" element={<RecipesPage />} />
+              <Route path="/recipes/:id" element={<RecipeDetailPage />} />
+              <Route path="/shopping" element={<ShoppingListPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }
