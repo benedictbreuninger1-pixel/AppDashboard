@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Edit2, Trash2, Save, X, ShoppingCart, Heart } from 'lucide-react';
 import { pb, POCKETBASE_URL } from '../lib/pocketbase';
-import { useRecipes } from '../hooks/useData';
+import { useRecipes } from '../hooks/useRecipes';
 import { useShoppingList } from '../hooks/useShoppingList';
 import { FadeIn } from '../components/PageTransition';
 
@@ -60,17 +60,25 @@ export default function RecipeDetailPage() {
     if (newMainImage) formData.append('mainImage', newMainImage);
     newExtraImages.forEach(file => formData.append('extraImages', file));
     
-    const updated = await updateRecipe(id, formData);
-    setRecipe(updated);
-    setNewMainImage(null);
-    setNewExtraImages([]);
-    setIsEditing(false);
+    const res = await updateRecipe(id, formData);
+    if (res.success) {
+        setRecipe(res.data);
+        setNewMainImage(null);
+        setNewExtraImages([]);
+        setIsEditing(false);
+    } else {
+        alert("Fehler beim Speichern: " + res.error);
+    }
   };
 
   const handleDelete = async () => {
     if (window.confirm('Rezept wirklich löschen?')) {
-      await deleteRecipe(id);
-      navigate('/recipes');
+      const res = await deleteRecipe(id);
+      if (res.success) {
+          navigate('/recipes');
+      } else {
+          alert("Konnte nicht gelöscht werden: " + res.error);
+      }
     }
   };
   
@@ -78,10 +86,12 @@ export default function RecipeDetailPage() {
     await toggleFavorite(id, recipe.isFavorite);
     setRecipe(prev => ({ ...prev, isFavorite: !prev.isFavorite }));
   };
-  
+
+  // --- DIE FEHLENDE FUNKTION ---
   const handleAddToShoppingList = () => {
     if (!recipe.ingredients) return;
     const lines = recipe.ingredients.split('\n').filter(l => l.trim());
+    // Standardmäßig alle auswählen
     setSelectedIngredients(lines.map((_, i) => i));
     setShowIngredientsModal(true);
   };

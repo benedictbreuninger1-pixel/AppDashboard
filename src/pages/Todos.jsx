@@ -1,21 +1,29 @@
 import React, { useState } from 'react';
-import { useTodos } from '../hooks/useData';
-import { Plus, Trash2, Users, Lock, CheckSquare } from 'lucide-react';
+import { useTodos } from '../hooks/useTodos'; // NEU
+import { Plus, Trash2, Users, Lock, CheckSquare, AlertCircle } from 'lucide-react';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
 
 export default function TodosPage() {
-  const { todos, createTodo, toggleTodo, deleteTodo, loading } = useTodos();
+  const { todos, createTodo, toggleTodo, deleteTodo, loading, error } = useTodos(); // NEU: error destructuring
   const [text, setText] = useState('');
   const [isShared, setIsShared] = useState(false);
   const [filter, setFilter] = useState('all');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => { // Async für Feedback
     e.preventDefault();
     if (!text.trim()) return;
-    createTodo(text, isShared);
-    setText('');
-    setIsShared(false);
+    
+    const res = await createTodo(text, isShared);
+    
+    if (res.success) {
+        setText('');
+        setIsShared(false);
+        // Hier könnte später stehen: toast.success("Todo erstellt");
+    } else {
+        // Hier könnte später stehen: toast.error(res.error);
+        console.error("Fehler:", res.error); 
+    }
   };
 
   const filteredTodos = todos.filter(t => {
@@ -27,6 +35,14 @@ export default function TodosPage() {
   return (
     <FadeIn>
       <div className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
+        {/* Error Banner falls globaler Hook Fehler */}
+        {error && (
+             <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm">
+                 <AlertCircle size={16} /> {error}
+             </div>
+        )}
+
+        {/* ... Rest der UI (Header, Form) bleibt gleich ... */}
         <header className="space-y-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">Aufgaben</h1>

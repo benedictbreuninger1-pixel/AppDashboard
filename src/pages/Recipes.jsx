@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { useRecipes } from '../hooks/useData';
+import { useRecipes } from '../hooks/useRecipes';
 import { POCKETBASE_URL } from '../lib/pocketbase';
-import { Plus, X, Search, Heart } from 'lucide-react';
+import { Plus, X, Search, Heart, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
 
 export default function RecipesPage() {
-  const { recipes, createRecipe, toggleFavorite, loading } = useRecipes();
+  const { recipes, createRecipe, toggleFavorite, loading, error } = useRecipes();
   const [showForm, setShowForm] = useState(false);
+  
+  // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState('');
@@ -17,12 +19,12 @@ export default function RecipesPage() {
   const [mainImageFile, setMainImageFile] = useState(null);
   const [extraImagesFiles, setExtraImagesFiles] = useState([]);
   
-  // Search & Filter
+  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  // Alle verfügbaren Tags extrahieren
+  // Alle Tags sammeln
   const allTags = useMemo(() => {
     const tagSet = new Set();
     recipes.forEach(r => {
@@ -33,12 +35,12 @@ export default function RecipesPage() {
     return Array.from(tagSet).sort();
   }, [recipes]);
 
-  // Gefilterte Rezepte
+  // Filtern
   const filteredRecipes = useMemo(() => {
     return recipes.filter(r => {
       const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           (r.description && r.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                           (r.ingredients && r.ingredients.toLowerCase().includes(searchQuery.toLowerCase()));
+                            (r.description && r.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                            (r.ingredients && r.ingredients.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesTag = !selectedTag || (r.tags && r.tags.split(',').map(t => t.trim()).includes(selectedTag));
       const matchesFavorite = !showFavoritesOnly || r.isFavorite;
       return matchesSearch && matchesTag && matchesFavorite;
@@ -54,24 +56,34 @@ export default function RecipesPage() {
     formData.append('steps', steps);
     formData.append('tags', tags);
     if (mainImageFile) formData.append('mainImage', mainImageFile);
-    extraImagesFiles.forEach(file => {
-      formData.append('extraImages', file);
-    });
+    extraImagesFiles.forEach(file => formData.append('extraImages', file));
     
-    await createRecipe(formData);
-    setTitle(''); 
-    setDescription('');
-    setIngredients(''); 
-    setSteps('');
-    setTags('');
-    setMainImageFile(null);
-    setExtraImagesFiles([]);
-    setShowForm(false);
+    const res = await createRecipe(formData);
+    
+    if (res.success) {
+        setTitle(''); 
+        setDescription('');
+        setIngredients(''); 
+        setSteps('');
+        setTags('');
+        setMainImageFile(null);
+        setExtraImagesFiles([]);
+        setShowForm(false);
+    } else {
+        alert("Fehler beim Erstellen: " + res.error);
+    }
   };
 
   return (
     <FadeIn>
       <div className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
+        {/* Error Anzeige */}
+        {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm mb-4">
+                <AlertCircle size={16} /> {error}
+            </div>
+        )}
+
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">Rezepte</h1>
@@ -85,84 +97,36 @@ export default function RecipesPage() {
           </button>
         </div>
 
+        {/* Create Form */}
         {showForm && (
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-100 space-y-4">
-            <input 
-              className="w-full font-semibold border-none focus:outline-none p-0 text-slate-800" 
-              placeholder="Rezept Name" 
-              value={title} 
-              onChange={e => setTitle(e.target.value)} 
-              required 
-            />
-            <textarea 
-              className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[60px] focus:ring-2 focus:ring-brand-200 outline-none" 
-              placeholder="Kurze Beschreibung (optional)" 
-              value={description} 
-              onChange={e => setDescription(e.target.value)} 
-            />
-            <input 
-              className="w-full text-sm border-none focus:outline-none p-0 text-slate-600" 
-              placeholder="Tags (z.B. Vegan, Schnell, Dessert)" 
-              value={tags} 
-              onChange={e => setTags(e.target.value)} 
-            />
-            <textarea 
-              className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[80px] focus:ring-2 focus:ring-brand-200 outline-none" 
-              placeholder="Zutaten (eine Zeile pro Zutat)" 
-              value={ingredients} 
-              onChange={e => setIngredients(e.target.value)} 
-            />
-            <textarea 
-              className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[80px] focus:ring-2 focus:ring-brand-200 outline-none" 
-              placeholder="Zubereitungsschritte" 
-              value={steps} 
-              onChange={e => setSteps(e.target.value)} 
-            />
-            
-            {/* Image Uploads */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
-                📷 {mainImageFile ? 'Hauptbild gewählt' : 'Hauptbild (optional)'}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={e => setMainImageFile(e.target.files[0])} 
-                />
-              </label>
-              
-              <label className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
-                🖼️ {extraImagesFiles.length > 0 ? `${extraImagesFiles.length} Zusatzbilder` : 'Zusatzbilder (max 3, optional)'}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  multiple
-                  className="hidden" 
-                  onChange={e => setExtraImagesFiles(Array.from(e.target.files).slice(0, 3))} 
-                />
-              </label>
-            </div>
-            
-            <div className="flex gap-2 pt-2">
-              <button 
-                type="button"
-                onClick={handleSubmit}
-                className="flex-1 bg-brand-400 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-500 active:bg-brand-600 transition-colors"
-              >
-                Speichern
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm hover:bg-slate-300 transition-colors"
-              >
-                Abbrechen
-              </button>
-            </div>
-          </div>
-        )}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-100 space-y-4">
+                 <input className="w-full font-semibold border-none focus:outline-none p-0 text-slate-800" placeholder="Rezept Name" value={title} onChange={e => setTitle(e.target.value)} required />
+                 <textarea className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[60px] focus:ring-2 focus:ring-brand-200 outline-none" placeholder="Kurze Beschreibung" value={description} onChange={e => setDescription(e.target.value)} />
+                 <input className="w-full text-sm border-none focus:outline-none p-0 text-slate-600" placeholder="Tags (z.B. Vegan, Schnell)" value={tags} onChange={e => setTags(e.target.value)} />
+                 <textarea className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[80px] focus:ring-2 focus:ring-brand-200 outline-none" placeholder="Zutaten" value={ingredients} onChange={e => setIngredients(e.target.value)} />
+                 <textarea className="w-full text-sm bg-slate-50 rounded-lg p-3 border-none min-h-[80px] focus:ring-2 focus:ring-brand-200 outline-none" placeholder="Zubereitungsschritte" value={steps} onChange={e => setSteps(e.target.value)} />
+                 
+                 {/* Image Uploads */}
+                 <div className="space-y-2">
+                   <label className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
+                     📷 {mainImageFile ? 'Hauptbild gewählt' : 'Hauptbild (optional)'}
+                     <input type="file" accept="image/*" className="hidden" onChange={e => setMainImageFile(e.target.files[0])} />
+                   </label>
+                   
+                   <label className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
+                     🖼️ {extraImagesFiles.length > 0 ? `${extraImagesFiles.length} Zusatzbilder` : 'Zusatzbilder (max 3)'}
+                     <input type="file" accept="image/*" multiple className="hidden" onChange={e => setExtraImagesFiles(Array.from(e.target.files).slice(0, 3))} />
+                   </label>
+                 </div>
 
-        {/* Search & Filter */}
+                 <div className="flex gap-2 pt-2">
+                    <button type="button" onClick={handleSubmit} className="flex-1 bg-brand-400 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-500">Speichern</button>
+                    <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm hover:bg-slate-300">Abbrechen</button>
+                 </div>
+            </div>
+        )}
+        
+        {/* Search & Filter UI (HIER WERDEN DIE VARIABLEN BENUTZT) */}
         <div className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -232,8 +196,6 @@ export default function RecipesPage() {
                       <p className="text-xs text-slate-500 line-clamp-3">{r.ingredients}</p>
                   </div>
                 </Link>
-                
-                {/* Favorite Button */}
                 <button
                   onClick={(e) => {
                     e.preventDefault();
@@ -241,11 +203,7 @@ export default function RecipesPage() {
                   }}
                   className="absolute top-2 right-2 p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
                 >
-                  <Heart 
-                    size={18} 
-                    className={r.isFavorite ? 'text-pink-500' : 'text-slate-400'}
-                    fill={r.isFavorite ? 'currentColor' : 'none'}
-                  />
+                  <Heart size={18} className={r.isFavorite ? 'text-pink-500' : 'text-slate-400'} fill={r.isFavorite ? 'currentColor' : 'none'} />
                 </button>
               </div>
             ))}
