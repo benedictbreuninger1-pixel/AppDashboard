@@ -1,18 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { useRecipes } from '../hooks/useRecipes';
-import { useToast } from '../context/ToastContext'; // NEU
+import { useToast } from '../context/ToastContext';
 import { POCKETBASE_URL } from '../lib/pocketbase';
-import { Plus, X, Search, Heart } from 'lucide-react';
+import { Plus, X, Search, Heart, AlertCircle } from 'lucide-react'; // AlertCircle
 import { Link } from 'react-router-dom';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
 
 export default function RecipesPage() {
-  const { recipes, createRecipe, toggleFavorite, loading } = useRecipes();
-  const { showToast } = useToast(); // NEU
+  const { recipes, createRecipe, toggleFavorite, loading, error } = useRecipes(); // error dazu
+  const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   
-  // Form State
+  // ... (State für Formular bleibt gleich)
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState('');
@@ -21,11 +21,11 @@ export default function RecipesPage() {
   const [mainImageFile, setMainImageFile] = useState(null);
   const [extraImagesFiles, setExtraImagesFiles] = useState([]);
   
-  // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
+  // ... (Memo Logik bleibt gleich)
   const allTags = useMemo(() => {
     const tagSet = new Set();
     recipes.forEach(r => {
@@ -58,9 +58,6 @@ export default function RecipesPage() {
     if (mainImageFile) formData.append('mainImage', mainImageFile);
     extraImagesFiles.forEach(file => formData.append('extraImages', file));
     
-    // Toast: Start Feedback (optional, aber bei Bilderupload nett)
-    // showToast('Speichere Rezept...', 'info'); 
-    
     const res = await createRecipe(formData);
     
     if (res.success) {
@@ -72,9 +69,9 @@ export default function RecipesPage() {
         setMainImageFile(null);
         setExtraImagesFiles([]);
         setShowForm(false);
-        showToast('Rezept erfolgreich erstellt', 'success'); // Toast Success
+        showToast('Rezept erfolgreich erstellt', 'success');
     } else {
-        showToast(res.error, 'error'); // Toast Error
+        showToast(res.error, 'error');
     }
   };
   
@@ -87,6 +84,13 @@ export default function RecipesPage() {
   return (
     <FadeIn>
       <div className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
+        {/* Error Anzeige */}
+        {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm border border-red-100 mb-4">
+                <AlertCircle size={16} /> {error}
+            </div>
+        )}
+
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">Rezepte</h1>
@@ -100,6 +104,7 @@ export default function RecipesPage() {
           </button>
         </div>
 
+        {/* ... (Formular UI bleibt exakt gleich, einfach einfügen) ... */}
         {showForm && (
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-100 space-y-4">
                  <input className="w-full font-semibold border-none focus:outline-none p-0 text-slate-800" placeholder="Rezept Name" value={title} onChange={e => setTitle(e.target.value)} required />
@@ -127,6 +132,7 @@ export default function RecipesPage() {
             </div>
         )}
         
+        {/* ... (Search & Filter UI und Grid bleiben gleich) ... */}
         <div className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />

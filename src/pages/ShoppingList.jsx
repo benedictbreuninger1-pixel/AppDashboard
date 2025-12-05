@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useShoppingList } from '../hooks/useShoppingList';
-import { useToast } from '../context/ToastContext'; // NEU
-import { Plus, Trash2, Check, ShoppingCart, Users, Lock } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { Plus, Trash2, Check, ShoppingCart, Users, Lock, AlertCircle } from 'lucide-react'; // AlertCircle
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
 
 export default function ShoppingListPage() {
-  const { items, loading, createItem, toggleStatus, deleteItem } = useShoppingList();
-  const { showToast } = useToast(); // NEU
+  const { items, loading, createItem, toggleStatus, deleteItem, error } = useShoppingList(); // error dazu
+  const { showToast } = useToast();
   
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -22,9 +22,9 @@ export default function ShoppingListPage() {
         setName('');
         setAmount('');
         setIsShared(false);
-        showToast('Zur Liste hinzugefügt', 'success'); // Toast
+        showToast('Zur Liste hinzugefügt', 'success');
     } else {
-        showToast(res.error, 'error'); // Error Toast
+        showToast(res.error, 'error');
     }
   };
 
@@ -48,6 +48,13 @@ export default function ShoppingListPage() {
   return (
     <FadeIn>
       <div className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
+        {/* Error Anzeige */}
+        {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm border border-red-100">
+                <AlertCircle size={16} /> {error}
+            </div>
+        )}
+
         <div>
           <h1 className="text-3xl font-bold text-slate-800 mb-1">Einkaufsliste</h1>
           <p className="text-slate-500 text-sm">Was brauchen wir?</p>

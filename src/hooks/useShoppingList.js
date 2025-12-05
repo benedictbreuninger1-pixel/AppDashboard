@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { pb } from '../lib/pocketbase';
-import { useAuthStore } from '../lib/store';
+import { useAuth } from '../context/AuthContext'; // Geändert
 import { formatError } from '../lib/utils';
 
 export function useShoppingList() {
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth(); // Geändert
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,8 +14,7 @@ export function useShoppingList() {
     setLoading(true);
     setError(null);
     try {
-      // Sort: -status (damit 'open' oben steht, siehe Todos Logik) und neueste oben
-      // Filter: Eigene oder Shared
+      // Sort: -status (damit 'open' oben steht), neueste zuerst
       const result = await pb.collection('shopping_items').getList(1, 200, { 
         sort: '-status,-created',
         filter: `owner = "${user.id}" || shared = true`,

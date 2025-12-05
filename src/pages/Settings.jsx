@@ -1,30 +1,29 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext'; // NEU
 import { FadeIn } from '../components/PageTransition';
-import { Lock, Check, X } from 'lucide-react';
+import { Lock } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, changePassword } = useAuth();
+  const { showToast } = useToast(); // NEU
+  
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess(false);
 
     // Validierung
     if (newPassword !== confirmPassword) {
-      setError('Die neuen Passwörter stimmen nicht überein');
+      showToast('Die neuen Passwörter stimmen nicht überein', 'error');
       return;
     }
 
     if (newPassword.length < 8) {
-      setError('Das neue Passwort muss mindestens 8 Zeichen lang sein');
+      showToast('Das neue Passwort muss mindestens 8 Zeichen lang sein', 'error');
       return;
     }
 
@@ -33,15 +32,12 @@ export default function SettingsPage() {
     setLoading(false);
 
     if (result.success) {
-      setSuccess(true);
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      
-      // Success-Message nach 3 Sekunden ausblenden
-      setTimeout(() => setSuccess(false), 3000);
+      showToast('Passwort erfolgreich geändert!', 'success');
     } else {
-      setError(result.error || 'Passwort ändern fehlgeschlagen');
+      showToast(result.error || 'Passwort ändern fehlgeschlagen', 'error');
     }
   };
 
@@ -111,22 +107,6 @@ export default function SettingsPage() {
                 disabled={loading}
               />
             </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                <X size={16} />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Success Message */}
-            {success && (
-              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
-                <Check size={16} />
-                <span>Passwort erfolgreich geändert!</span>
-              </div>
-            )}
 
             <button
               onClick={handleSubmit}

@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { pb } from '../lib/pocketbase';
-import { useAuthStore } from '../lib/store';
+import { useAuth } from '../context/AuthContext'; // Geändert
 import { formatError } from '../lib/utils';
 
 export function useTodos() {
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth(); // Geändert: useAuth statt useAuthStore
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -43,7 +43,7 @@ export function useTodos() {
     };
     try {
       const record = await pb.collection('todos').create(data);
-      // Optimistisches Update bzw. direkter State-Update ohne Refetch
+      // Optimistisches Update
       setTodos((prev) => [record, ...prev]);
       return { success: true };
     } catch (err) {

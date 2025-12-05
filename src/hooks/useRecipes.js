@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { pb } from '../lib/pocketbase';
-import { useAuthStore } from '../lib/store';
+import { useAuth } from '../context/AuthContext'; // Geändert
 import { formatError } from '../lib/utils';
 
 export function useRecipes() {
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth(); // Geändert
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,10 +14,11 @@ export function useRecipes() {
     setLoading(true);
     setError(null);
     try {
-      // Lade die neuesten 200 Rezepte (Pagination vorbereitet)
-      // Wir gehen davon aus, dass Rezepte 'shared' oder 'owner' sind (Standard ACL in PB)
+      // Lade die neuesten 200 Rezepte
       const result = await pb.collection('recipes').getList(1, 200, {
         sort: '-created',
+        // Optional: Expliziter Filter, falls API-Rules nicht reichen
+        // filter: `owner = "${user.id}" || shared = true` 
       });
       setRecipes(result.items);
     } catch (err) {
@@ -77,7 +78,6 @@ export function useRecipes() {
       setRecipes((prev) => prev.map(r => r.id === id ? record : r));
       return { success: true };
     } catch (err) {
-        // Silent fail für Favoriten Toggle, aber loggen
         console.error(err);
         return { success: false, error: formatError(err) };
     }

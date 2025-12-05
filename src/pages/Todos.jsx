@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useTodos } from '../hooks/useTodos';
-import { useToast } from '../context/ToastContext'; // NEU
-import { Plus, Trash2, Users, Lock, CheckSquare } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { Plus, Trash2, Users, Lock, CheckSquare, AlertCircle } from 'lucide-react'; // AlertCircle hinzugefügt
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
 
 export default function TodosPage() {
-  const { todos, createTodo, toggleTodo, deleteTodo, loading } = useTodos();
-  const { showToast } = useToast(); // NEU
+  const { todos, createTodo, toggleTodo, deleteTodo, loading, error } = useTodos(); // error dazu
+  const { showToast } = useToast();
   
   const [text, setText] = useState('');
   const [isShared, setIsShared] = useState(false);
@@ -22,9 +22,9 @@ export default function TodosPage() {
     if (res.success) {
         setText('');
         setIsShared(false);
-        showToast('Aufgabe hinzugefügt!', 'success'); // Toast
+        showToast('Aufgabe hinzugefügt!', 'success');
     } else {
-        showToast(res.error, 'error'); // Error Toast
+        showToast(res.error, 'error');
     }
   };
 
@@ -51,7 +51,13 @@ export default function TodosPage() {
   return (
     <FadeIn>
       <div className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
-        {/* Header (unverändert) */}
+        {/* Error Anzeige */}
+        {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm border border-red-100">
+                <AlertCircle size={16} /> {error}
+            </div>
+        )}
+
         <header className="space-y-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-800 mb-1">Aufgaben</h1>
@@ -71,7 +77,6 @@ export default function TodosPage() {
           </div>
         </header>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 focus-within:ring-2 ring-brand-200">
           <div className="flex gap-2">
             <input 
@@ -98,7 +103,6 @@ export default function TodosPage() {
           </div>
         </form>
 
-        {/* List */}
         {loading ? (
           <SkeletonLoader type="todo" count={4} />
         ) : filteredTodos.length === 0 ? (

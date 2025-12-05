@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { Home, CheckSquare, BookOpen, LogOut, User, ShoppingCart, Settings as SettingsIcon } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ToastProvider } from './context/ToastContext'; // NEU
+import { ToastProvider } from './context/ToastContext';
 import { FadeIn } from './components/PageTransition';
 import { pb, POCKETBASE_URL } from './lib/pocketbase';
 import LoginPage from './pages/Login';
@@ -158,7 +158,7 @@ const Sidebar = () => {
   );
 };
 
-// --- DASHBOARD ---
+// --- DASHBOARD (Optimiert: getList statt getFullList) ---
 const Dashboard = () => {
     const { user } = useAuth();
     const [stats, setStats] = React.useState({ todos: 0, todosOpen: 0, recipes: 0, shoppingItems: 0 });
@@ -167,20 +167,34 @@ const Dashboard = () => {
     
     React.useEffect(() => {
       const fetchDashboardData = async () => {
+        if (!user) return;
         try {
-          // Fetch Todos
-          const todosData = await pb.collection('todos').getFullList();
+          // Fetch Todos (Limit 200, matching hooks)
+          const todosResult = await pb.collection('todos').getList(1, 200, {
+             filter: `owner = "${user.id}" || shared = true`,
+             sort: '-status,-created'
+          });
+          const todosData = todosResult.items;
           const openTodos = todosData.filter(t => t.status === 'open');
           
           // Fetch Recipes
-          const recipesData = await pb.collection('recipes').getFullList({ sort: '-updated' });
+          const recipesResult = await pb.collection('recipes').getList(1, 200, {
+             sort: '-updated'
+             // Filter: Wir nehmen hier die API default (meist owner/shared) oder explizit:
+             // filter: `owner = "${user.id}" || shared = true`
+          });
+          const recipesData = recipesResult.items;
           
           // Fetch Shopping Items
-          const shoppingData = await pb.collection('shopping_items').getFullList();
+          const shoppingResult = await pb.collection('shopping_items').getList(1, 200, {
+             filter: `owner = "${user.id}" || shared = true`,
+             sort: '-status,-created'
+          });
+          const shoppingData = shoppingResult.items;
           const openShoppingItems = shoppingData.filter(s => s.status === 'open');
           
           setStats({
-            todos: todosData.length,
+            todos: todosData.length, // Oder todosResult.totalItems wenn Pagination wichtig wäre
             todosOpen: openTodos.length,
             recipes: recipesData.length,
             shoppingItems: openShoppingItems.length,
@@ -196,10 +210,11 @@ const Dashboard = () => {
           }
         } catch (err) {
           console.error('Dashboard Daten laden fehlgeschlagen:', err);
+          // Stats behalten ihren initialen 0-Wert, App crasht nicht
         }
       };
       
-      if (user) fetchDashboardData();
+      fetchDashboardData();
     }, [user]);
     
     return (
@@ -322,7 +337,7 @@ const Dashboard = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <ToastProvider> {/* Provider hier eingefügt */}
+      <ToastProvider> 
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
