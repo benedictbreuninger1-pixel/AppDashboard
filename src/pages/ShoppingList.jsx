@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useShoppingList } from '../hooks/useShoppingList';
 import { useToast } from '../context/ToastContext';
+import { useHaptics } from '../hooks/useHaptics';
 import { Plus, Trash2, Check, ShoppingCart, Users, Lock } from 'lucide-react';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { FadeIn } from '../components/PageTransition';
@@ -9,8 +10,9 @@ import ErrorBanner from '../components/ErrorBanner';
 import SwipeableListItem from '../components/SwipeableListItem';
 
 export default function ShoppingListPage() {
-  const { items, loading, createItem, toggleStatus, deleteItem, refetch, error } = useShoppingList();
+  const { items, loading, createItem, toggleStatus, deleteItem, bulkDeleteDone, refetch, error } = useShoppingList();
   const { showToast } = useToast();
+  const { vibrate } = useHaptics();
   
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -51,7 +53,32 @@ export default function ShoppingListPage() {
     }
   };
 
-  const openItems = items.filter(item => item.status === 'open');
+  const handleBulkDelete = async () => {
+    vibrate(20);
+    const res = await bulkDeleteDone();
+    if (res.success) {
+      showToast(`${res.count} erledigte Items gelöscht`, 'success');
+    } else {
+      showToast(res.error || 'Fehler beim Löschen', 'error');
+    }
+  };
+
+  // Gruppierung nach Kategorie (nur offene Items)
+  const groupedItems = useMemo(() => {
+    const openItems = items.filter(item => item.status === 'open');
+    const groups = {};
+    
+    openItems.forEach(item => {
+      const category = item.category || 'Ohne Kategorie';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(item);
+    });
+    
+    return groups;
+  }, [items]);
+
   const boughtItems = items.filter(item => item.status === 'done');
 
   return (
@@ -100,48 +127,65 @@ export default function ShoppingListPage() {
 
           {loading ? <SkeletonLoader type="todo" count={3} /> : (
               <>
-                  {openItems.length > 0 && (
-                    <div className="space-y-3">
-                      <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                        <ShoppingCart size={16} /> Zu kaufen ({openItems.length})
-                      </h2>
-                      <div className="space-y-2">
-                        {openItems.map(item => (
-                          <SwipeableListItem key={item.id} onDelete={() => handleDelete(item.id)}>
-                            <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow group">
-                              <button onClick={() => handleToggle(item.id, item.status)} className="w-6 h-6 rounded-full border-2 border-slate-300 dark:border-slate-600 hover:border-brand-400 flex items-center justify-center transition-colors">
-                                {/* Empty Circle */}
-                              </button>
-                              <div className="flex-1 min-w-0">
-                                  <div className="flex items-baseline gap-2">
-                                      <span className="text-slate-800 dark:text-slate-100 font-medium">{item.name}</span>
-                                      {item.amount && <span className="text-xs text-slate-500 dark:text-slate-400">{item.amount}</span>}
+                  {Object.keys(groupedItems).length > 0 && (
+                    <div className="space-y-6">
+                      {Object.entries(groupedItems).map(([category, categoryItems]) => (
+                        <div key={category}>
+                          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-3">
+                            <ShoppingCart size={16} /> {category} ({categoryItems.length})
+                          </h2>
+                          <div className="space-y-2">
+                            {categoryItems.map(item => (
+                              <SwipeableListItem key={item.id} onDelete={() => handleDelete(item.id)}>
+                                <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow group">
+                                  <button onClick={() => handleToggle(item.id, item.status)} className="w-6 h-6 rounded-full border-2 border-slate-300 dark:border-slate-600 hover:border-brand-400 flex items-center justify-center transition-colors shrink-0">
+                                    {/* Empty Circle */}
+                                  </button>
+                                  <div className="flex-1 min-w-0">
+                                      <div className="flex items-baseline gap-2">
+                                          <span className="text-slate-800 dark:text-slate-100 font-medium">{item.name}</span>
+                                          {item.amount && <span className="text-xs text-slate-500 dark:text-slate-400">{item.amount}</span>}
+                                      </div>
+                                      {item.shared && <span className="text-[10px] text-brand-500 dark:text-brand-400 flex items-center gap-1 mt-1"><Users size={10}/> Gemeinsam</span>}
                                   </div>
-                                  {item.shared && <span className="text-[10px] text-brand-500 dark:text-brand-400 flex items-center gap-1 mt-1"><Users size={10}/> Gemeinsam</span>}
-                              </div>
-                              <button onClick={() => handleDelete(item.id)} className="hidden md:block text-slate-300 hover:text-red-500 p-2 transition-colors"><Trash2 size={16} /></button>
-                            </div>
-                          </SwipeableListItem>
-                        ))}
-                      </div>
+                                  <button onClick={() => handleDelete(item.id)} className="hidden md:block text-slate-300 hover:text-red-500 p-2 transition-colors shrink-0"><Trash2 size={16} /></button>
+                                </div>
+                              </SwipeableListItem>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                   
                   {boughtItems.length > 0 && (
-                    <details className="group">
-                      <summary className="text-sm font-semibold text-slate-500 dark:text-slate-400 cursor-pointer flex items-center gap-2 mt-4 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
-                        <Check size={16} /> Gekauft ({boughtItems.length})
-                      </summary>
-                      <div className="space-y-2 mt-3">
-                          {boughtItems.map(item => (
-                              <div key={item.id} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-3 rounded-lg opacity-60">
-                                  <button onClick={() => handleToggle(item.id, item.status)} className="w-5 h-5 rounded-full bg-brand-400 flex items-center justify-center text-white"><Check size={12}/></button>
-                                  <span className="text-sm text-slate-500 dark:text-slate-400 line-through flex-1">{item.name}</span>
-                                  <button onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
-                              </div>
-                          ))}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                          <Check size={16} /> Gekauft ({boughtItems.length})
+                        </h2>
+                        <button
+                          onClick={handleBulkDelete}
+                          className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium flex items-center gap-1 hover:underline"
+                        >
+                          <Trash2 size={12} /> Alle löschen
+                        </button>
                       </div>
-                    </details>
+                      <details className="group">
+                        <summary className="cursor-pointer text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
+                          Anzeigen
+                        </summary>
+                        <div className="space-y-2 mt-3">
+                            {boughtItems.map(item => (
+                                <div key={item.id} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-3 rounded-lg opacity-60">
+                                    <button onClick={() => handleToggle(item.id, item.status)} className="w-5 h-5 rounded-full bg-brand-400 flex items-center justify-center text-white shrink-0"><Check size={12}/></button>
+                                    <span className="text-sm text-slate-500 dark:text-slate-400 line-through flex-1">{item.name}</span>
+                                    <button onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                                </div>
+                            ))}
+                        </div>
+                      </details>
+                    </div>
                   )}
               </>
           )}

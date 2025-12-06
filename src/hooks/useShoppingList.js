@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { pb } from "../lib/pocketbase";
-import { useAuth } from "../context/AuthContext"; // Geändert
-import { formatError } from "../lib/utils";
+import { useAuth } from "../context/AuthContext";
+import { formatError, categorizeItem } from "../lib/utils";
 
 export function useShoppingList() {
-  const { user } = useAuth(); // Geändert
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,7 +14,6 @@ export function useShoppingList() {
     setLoading(true);
     setError(null);
     try {
-      // Sort: -status (damit 'open' oben steht), neueste zuerst
       const result = await pb.collection("shopping_items").getList(1, 200, {
         sort: "-status,-created",
         filter: `owner = "${user.id}" || shared = true`,
@@ -34,12 +33,16 @@ export function useShoppingList() {
   }, [fetchItems]);
 
   const createItem = async (name, amount, isShared, fromRecipeId = null) => {
+    // Auto-Kategorisierung beim Erstellen
+    const autoCategory = categorizeItem(name);
+    
     const data = {
       name,
       amount: amount || "",
       status: "open",
       shared: isShared,
       owner: user.id,
+      category: autoCategory || "", // Automatisch gesetzt oder leer
     };
     if (fromRecipeId) data.fromRecipe = fromRecipeId;
 
@@ -49,7 +52,6 @@ export function useShoppingList() {
       return { success: true };
     } catch (err) {
       const msg = formatError(err);
-      // ❌ setError(msg);  // RAUS
       return { success: false, error: msg };
     }
   };
@@ -57,7 +59,6 @@ export function useShoppingList() {
   const toggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "open" ? "done" : "open";
 
-    // Optimistic Update
     setItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, status: newStatus } : item
@@ -68,14 +69,12 @@ export function useShoppingList() {
       await pb.collection("shopping_items").update(id, { status: newStatus });
       return { success: true };
     } catch (err) {
-      // Rollback
       setItems((prev) =>
         prev.map((item) =>
           item.id === id ? { ...item, status: currentStatus } : item
         )
       );
       const msg = formatError(err);
-      // ❌ setError(msg);  // RAUS
       return { success: false, error: msg };
     }
   };
@@ -90,7 +89,29 @@ export function useShoppingList() {
     } catch (err) {
       setItems(prevItems);
       const msg = formatError(err);
-      // ❌ setError(msg);  // RAUS
+      return { success: false, error: msg };
+    }
+  };
+
+  const bulkDeleteDone = async () => {
+    const doneItems = items.filter(item => item.status === 'done');
+    const doneIds = doneItems.map(item => item.id);
+    
+    if (doneIds.length === 0) {
+      return { success: false, error: 'Keine erledigten Items' };
+    }
+
+    // Optimistic update
+    setItems(prev => prev.filter(item => item.status !== 'done'));
+
+    try {
+      await Promise.all(
+        doneIds.map(id => pb.collection("shopping_items").delete(id))
+      );
+      return { success: true, count: doneIds.length };
+    } catch (err) {
+      await fetchItems(); // Rollback
+      const msg = formatError(err);
       return { success: false, error: msg };
     }
   };
@@ -103,5 +124,6 @@ export function useShoppingList() {
     createItem,
     toggleStatus,
     deleteItem,
+    bulkDeleteDone,
   };
 }
