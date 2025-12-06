@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { pb } from "../lib/pocketbase";
-import { useAuth } from "../context/AuthContext"; // Geändert
+import { useAuth } from "../context/AuthContext";
 import { formatError } from "../lib/utils";
 
 export function useRecipes() {
-  const { user } = useAuth(); // Geändert
+  const { user } = useAuth();
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,11 +14,9 @@ export function useRecipes() {
     setLoading(true);
     setError(null);
     try {
-      // Lade die neuesten 200 Rezepte
       const result = await pb.collection("recipes").getList(1, 200, {
         sort: "-created",
-        // Optional: Expliziter Filter, falls API-Rules nicht reichen
-        // filter: `owner = "${user.id}" || shared = true`
+        expand: "recipe_ingredients_via_recipe",
       });
       setRecipes(result.items);
     } catch (err) {
@@ -37,11 +35,10 @@ export function useRecipes() {
     if (!formData.has("owner")) formData.append("owner", user.id);
     try {
       const record = await pb.collection("recipes").create(formData);
-      setRecipes((prev) => [record, ...prev]);
+      await fetchRecipes(); // Reload mit expand
       return { success: true, data: record };
     } catch (err) {
       const msg = formatError(err);
-      // ❌ setError(msg);
       return { success: false, error: msg };
     }
   };
@@ -49,11 +46,10 @@ export function useRecipes() {
   const updateRecipe = async (id, formData) => {
     try {
       const record = await pb.collection("recipes").update(id, formData);
-      setRecipes((prev) => prev.map((r) => (r.id === id ? record : r)));
+      await fetchRecipes();
       return { success: true, data: record };
     } catch (err) {
       const msg = formatError(err);
-      // ❌ setError(msg);
       return { success: false, error: msg };
     }
   };
@@ -67,7 +63,6 @@ export function useRecipes() {
     } catch (err) {
       setRecipes(prevRecipes);
       const msg = formatError(err);
-      // ❌ setError(msg);
       return { success: false, error: msg };
     }
   };
@@ -85,6 +80,61 @@ export function useRecipes() {
     }
   };
 
+  // Structured Ingredients Management
+  const createIngredient = async (recipeId, data) => {
+    try {
+      await pb.collection("recipe_ingredients").create({
+        recipe: recipeId,
+        name: data.name,
+        amount: data.amount || "",
+        unit: data.unit || "",
+      });
+      await fetchRecipes();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: formatError(err) };
+    }
+  };
+
+  const updateIngredient = async (ingredientId, data) => {
+    try {
+      await pb.collection("recipe_ingredients").update(ingredientId, data);
+      await fetchRecipes();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: formatError(err) };
+    }
+  };
+
+  const deleteIngredient = async (ingredientId) => {
+    try {
+      await pb.collection("recipe_ingredients").delete(ingredientId);
+      await fetchRecipes();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: formatError(err) };
+    }
+  };
+
+  const bulkCreateIngredients = async (recipeId, ingredients) => {
+    try {
+      await Promise.all(
+        ingredients.map(ing =>
+          pb.collection("recipe_ingredients").create({
+            recipe: recipeId,
+            name: ing.name,
+            amount: ing.amount || "",
+            unit: ing.unit || "",
+          })
+        )
+      );
+      await fetchRecipes();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: formatError(err) };
+    }
+  };
+
   return {
     recipes,
     loading,
@@ -94,5 +144,9 @@ export function useRecipes() {
     updateRecipe,
     deleteRecipe,
     toggleFavorite,
+    createIngredient,
+    updateIngredient,
+    deleteIngredient,
+    bulkCreateIngredients,
   };
 }

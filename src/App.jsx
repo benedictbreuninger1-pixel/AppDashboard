@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { Home, CheckSquare, BookOpen, LogOut, User, ShoppingCart, Settings as SettingsIcon } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
-import { ThemeProvider } from './context/ThemeContext'; // NEU
+import { ThemeProvider } from './context/ThemeContext';
 import { FadeIn } from './components/PageTransition';
 import { pb, POCKETBASE_URL } from './lib/pocketbase';
-import PullToRefresh from './components/PullToRefresh'; // NEU
-import ErrorBanner from './components/ErrorBanner'; // NEU
+import PullToRefresh from './components/PullToRefresh';
+import ErrorBanner from './components/ErrorBanner';
 import LoginPage from './pages/Login';
 import TodosPage from './pages/Todos';
 import RecipesPage from './pages/Recipes';
@@ -15,7 +15,6 @@ import RecipeDetailPage from './pages/RecipeDetail';
 import ShoppingListPage from './pages/ShoppingList';
 import SettingsPage from './pages/Settings';
 
-// --- PROTECTED ROUTE WRAPPER ---
 const ProtectedRoute = () => {
   const { user, loading } = useAuth();
   
@@ -31,36 +30,54 @@ const ProtectedRoute = () => {
   );
 };
 
-// --- NAVIGATION COMPONENTS ---
-const NavLinks = [
+const NAV_LINKS = [
   { to: '/', icon: Home, label: 'Start' },
   { to: '/todos', icon: CheckSquare, label: 'Todos' },
   { to: '/recipes', icon: BookOpen, label: 'Rezepte' },
   { to: '/shopping', icon: ShoppingCart, label: 'Einkaufen' },
 ];
 
+const NavLink = React.memo(({ link, isActive }) => {
+  const IconComponent = link.icon;
+  return (
+    <Link 
+      key={link.to} 
+      to={link.to} 
+      className={`flex flex-col items-center p-2 transition-colors ${isActive ? 'text-brand-400 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'}`}
+      aria-label={link.label}
+      aria-current={isActive ? 'page' : undefined}
+    >
+      <IconComponent size={24} />
+      <span className="text-[10px] mt-0.5 font-medium">{link.label}</span>
+    </Link>
+  );
+});
+
+NavLink.displayName = 'NavLink';
+
 const BottomNav = () => {
   const location = useLocation();
   const { logout } = useAuth();
-  const [showLogoutMenu, setShowLogoutMenu] = React.useState(false);
+  const [showLogoutMenu, setShowLogoutMenu] = useState(false);
+  
+  const handleLogoutClick = useCallback(() => setShowLogoutMenu(true), []);
+  const handleCloseMenu = useCallback(() => setShowLogoutMenu(false), []);
+  const handleLogout = useCallback(() => {
+    logout();
+    setShowLogoutMenu(false);
+  }, [logout]);
   
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 md:hidden z-50 safe-area-pb transition-colors">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 md:hidden z-50 safe-area-pb transition-colors" role="navigation" aria-label="Hauptnavigation">
         <div className="flex justify-around items-center h-16">
-          {NavLinks.map((link) => {
-            const isActive = location.pathname === link.to;
-            const IconComponent = link.icon;
-            return (
-              <Link key={link.to} to={link.to} className={`flex flex-col items-center p-2 transition-colors ${isActive ? 'text-brand-400 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                <IconComponent size={24} />
-                <span className="text-[10px] mt-0.5 font-medium">{link.label}</span>
-              </Link>
-            )
-          })}
+          {NAV_LINKS.map((link) => (
+            <NavLink key={link.to} link={link} isActive={location.pathname === link.to} />
+          ))}
           <button 
-            onClick={() => setShowLogoutMenu(true)}
+            onClick={handleLogoutClick}
             className="flex flex-col items-center p-2 text-slate-400 dark:text-slate-500"
+            aria-label="Profil öffnen"
           >
             <User size={24} />
             <span className="text-[10px] mt-0.5 font-medium">Profil</span>
@@ -68,37 +85,36 @@ const BottomNav = () => {
         </div>
       </nav>
       
-      {/* Logout Menu (Mobile) */}
       {showLogoutMenu && (
         <div 
           className="fixed inset-0 bg-black/50 z-50 md:hidden flex items-end"
-          onClick={() => setShowLogoutMenu(false)}
+          onClick={handleCloseMenu}
         >
           <div 
             className="bg-white dark:bg-slate-900 w-full rounded-t-2xl p-6 space-y-4 animate-slideUp border-t border-slate-200 dark:border-slate-800"
             onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-menu-title"
           >
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Account</h3>
+            <h3 id="logout-menu-title" className="text-lg font-semibold text-slate-800 dark:text-slate-100">Account</h3>
             <Link
               to="/settings"
-              onClick={() => setShowLogoutMenu(false)}
+              onClick={handleCloseMenu}
               className="w-full flex items-center gap-3 px-4 py-3 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
             >
               <SettingsIcon size={20} />
               <span>Einstellungen</span>
             </Link>
             <button
-              onClick={() => {
-                logout();
-                setShowLogoutMenu(false);
-              }}
+              onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             >
               <LogOut size={20} />
               <span>Abmelden</span>
             </button>
             <button
-              onClick={() => setShowLogoutMenu(false)}
+              onClick={handleCloseMenu}
               className="w-full px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
             >
               Abbrechen
@@ -110,39 +126,39 @@ const BottomNav = () => {
   );
 };
 
+const SidebarLink = React.memo(({ link, isActive }) => {
+  const IconComponent = link.icon;
+  return (
+    <Link 
+      to={link.to} 
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+      aria-label={link.label}
+      aria-current={isActive ? 'page' : undefined}
+    >
+      <IconComponent size={20} /> 
+      <span className="font-medium">{link.label}</span>
+    </Link>
+  );
+});
+
+SidebarLink.displayName = 'SidebarLink';
+
 const Sidebar = () => {
   const { logout, user } = useAuth();
   const location = useLocation();
 
   return (
-    <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-4 transition-colors">
+    <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-4 transition-colors" role="navigation" aria-label="Seitennavigation">
       <div className="mb-8 px-2">
         <h1 className="text-xl font-bold text-brand-600 dark:text-brand-400">Plan & Plate</h1>
       </div>
       
       <div className="flex-1 space-y-1">
-        {NavLinks.map((link) => {
-           const isActive = location.pathname === link.to;
-           const IconComponent = link.icon;
-           return (
-            <Link 
-              key={link.to} 
-              to={link.to} 
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-            >
-              <IconComponent size={20} /> 
-              <span className="font-medium">{link.label}</span>
-            </Link>
-           )
-        })}
+        {NAV_LINKS.map((link) => (
+          <SidebarLink key={link.to} link={link} isActive={location.pathname === link.to} />
+        ))}
         
-        <Link 
-          to="/settings" 
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${location.pathname === '/settings' ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-        >
-          <SettingsIcon size={20} /> 
-          <span className="font-medium">Einstellungen</span>
-        </Link>
+        <SidebarLink link={{ to: '/settings', icon: SettingsIcon, label: 'Einstellungen' }} isActive={location.pathname === '/settings'} />
       </div>
 
       <div className="border-t dark:border-slate-800 pt-4 mt-auto">
@@ -152,7 +168,8 @@ const Sidebar = () => {
         </div>
         <button 
           onClick={logout} 
-          className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-red-600 px-2 text-sm w-full transition-colors"
+          className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-red-600 px-2 text-sm w-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
+          aria-label="Abmelden"
         >
             <LogOut size={16} /> Abmelden
         </button>
@@ -161,40 +178,43 @@ const Sidebar = () => {
   );
 };
 
-// --- DASHBOARD ---
+// StatCard außerhalb der Dashboard-Komponente deklarieren
+const StatCard = React.memo(({ value, label }) => (
+  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+    <div className="text-2xl font-bold text-brand-500">{value}</div>
+    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{label}</div>
+  </div>
+));
+
+StatCard.displayName = 'StatCard';
+
 const Dashboard = () => {
     const { user } = useAuth();
-    const [stats, setStats] = React.useState({ todos: 0, todosOpen: 0, recipes: 0, shoppingItems: 0 });
-    const [quickTodos, setQuickTodos] = React.useState([]);
-    const [randomRecipe, setRandomRecipe] = React.useState(null);
-    const [error, setError] = React.useState(null);
+    const [stats, setStats] = useState({ todos: 0, todosOpen: 0, recipes: 0, shoppingItems: 0 });
+    const [quickTodos, setQuickTodos] = useState([]);
+    const [randomRecipe, setRandomRecipe] = useState(null);
+    const [error, setError] = useState(null);
     
-    // Extrahierte Lade-Logik für Pull-to-refresh
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
       if (!user) return;
       setError(null);
       try {
-        // Fetch Todos
-        const todosResult = await pb.collection('todos').getList(1, 200, {
-           filter: `owner = "${user.id}" || shared = true`,
-           sort: '-status,-created'
-        });
+        const [todosResult, recipesResult, shoppingResult] = await Promise.all([
+          pb.collection('todos').getList(1, 200, {
+            filter: `owner = "${user.id}" || shared = true`,
+            sort: '-status,-created'
+          }),
+          pb.collection('recipes').getList(1, 200, { sort: '-updated' }),
+          pb.collection('shopping_items').getList(1, 200, {
+            filter: `owner = "${user.id}" || shared = true`,
+            sort: '-status,-created'
+          })
+        ]);
+        
         const todosData = todosResult.items;
         const openTodos = todosData.filter(t => t.status === 'open');
-        
-        // Fetch Recipes
-        const recipesResult = await pb.collection('recipes').getList(1, 200, {
-           sort: '-updated'
-        });
         const recipesData = recipesResult.items;
-        
-        // Fetch Shopping Items
-        const shoppingResult = await pb.collection('shopping_items').getList(1, 200, {
-           filter: `owner = "${user.id}" || shared = true`,
-           sort: '-status,-created'
-        });
-        const shoppingData = shoppingResult.items;
-        const openShoppingItems = shoppingData.filter(s => s.status === 'open');
+        const openShoppingItems = shoppingResult.items.filter(s => s.status === 'open');
         
         setStats({
           todos: todosData.length,
@@ -213,11 +233,11 @@ const Dashboard = () => {
         console.error('Dashboard Daten laden fehlgeschlagen:', err);
         setError("Konnte Daten nicht aktualisieren.");
       }
-    };
+    }, [user]);
 
     React.useEffect(() => {
       fetchDashboardData();
-    }, [user]);
+    }, [fetchDashboardData]);
     
     return (
       <PullToRefresh onRefresh={fetchDashboardData}>
@@ -232,25 +252,12 @@ const Dashboard = () => {
 
             {error && <ErrorBanner message={error} onRetry={fetchDashboardData} />}
             
-            {/* Stats Grid */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                <div className="text-2xl font-bold text-brand-500">{stats.todosOpen}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">offene Todos</div>
-              </div>
-              
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                <div className="text-2xl font-bold text-brand-500">{stats.recipes}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Rezepte</div>
-              </div>
-              
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                <div className="text-2xl font-bold text-brand-500">{stats.shoppingItems}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Einkaufen</div>
-              </div>
+              <StatCard value={stats.todosOpen} label="offene Todos" />
+              <StatCard value={stats.recipes} label="Rezepte" />
+              <StatCard value={stats.shoppingItems} label="Einkaufen" />
             </div>
             
-            {/* Quick Access */}
             {quickTodos.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -275,7 +282,6 @@ const Dashboard = () => {
               </div>
             )}
             
-            {/* Rezept des Tages */}
             {randomRecipe && (
               <div className="space-y-3">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Rezept des Tages</h2>
@@ -284,10 +290,10 @@ const Dashboard = () => {
                   className="block bg-gradient-to-br from-brand-50 to-pink-50 dark:from-brand-900/40 dark:to-slate-900 p-4 rounded-xl border border-brand-100 dark:border-slate-800 hover:shadow-md transition-all group"
                 >
                   <div className="flex items-start gap-3">
-                    {randomRecipe.image ? (
+                    {randomRecipe.mainImage ? (
                       <div className="w-10 h-10 rounded-lg overflow-hidden shadow-sm shrink-0">
                         <img 
-                          src={`${POCKETBASE_URL}/api/files/${randomRecipe.collectionId}/${randomRecipe.id}/${randomRecipe.image}`}
+                          src={`${POCKETBASE_URL}/api/files/${randomRecipe.collectionId}/${randomRecipe.id}/${randomRecipe.mainImage}`}
                           alt={randomRecipe.title}
                           className="w-full h-full object-cover"
                         />
@@ -310,7 +316,6 @@ const Dashboard = () => {
               </div>
             )}
             
-            {/* Cards */}
             <div className="grid grid-cols-2 gap-4 pt-4">
               <Link 
                 to="/todos" 
@@ -338,11 +343,10 @@ const Dashboard = () => {
     );
   };
 
-// --- APP COMPONENT ---
 export default function App() {
   return (
     <AuthProvider>
-      <ThemeProvider> {/* Added ThemeProvider */}
+      <ThemeProvider>
         <ToastProvider> 
           <BrowserRouter>
             <Routes>
